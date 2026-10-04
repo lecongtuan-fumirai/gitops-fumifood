@@ -17,6 +17,7 @@ spec:
     spec:
       priorityClassName: workload-standard
       automountServiceAccountToken: false
+      enableServiceLinks: false
       terminationGracePeriodSeconds: 60
       containers:
         - name: floci
@@ -25,6 +26,7 @@ spec:
             - { name: api, containerPort: 4566 }
           env:
             - { name: DOCKER_HOST, value: tcp://127.0.0.1:2375 }
+            - { name: FLOCI_PORT, value: "4566" }
             - { name: FLOCI_RUN_AS_ROOT, value: "true" }
             - { name: FLOCI_STORAGE_PERSISTENT_PATH, value: /app/data }
             - { name: FLOCI_SERVICES_UI_ENABLED, value: "false" }   # floci-ui is its own Deployment
