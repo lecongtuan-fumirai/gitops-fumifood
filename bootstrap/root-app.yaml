@@ -1,0 +1,24 @@
+# Root "app of apps". Applied once by bootstrap/bootstrap.sh; afterwards it
+# reconciles clusters/prod (projects, platform Applications, apps ApplicationSet).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+    targetRevision: main
+    path: clusters/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Asia/Ho_Chi_Minh",
+  "schedule": ["before 9am on monday"],
+  "prConcurrentLimit": 5,
+  "argocd": { "fileMatch": ["^clusters/.+\\.ya?ml$"] },
+  "kustomize": { "fileMatch": ["(^|/)kustomization\\.ya?ml$"] },
+  "helm-values": { "fileMatch": ["^platform/.+/values\\.ya?ml$"] },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "k3s version in Ansible + SUC plan",
+      "fileMatch": ["^ansible/group_vars/all\\.yml$", "^platform/system-upgrade-controller/plans\\.yaml$"],
+      "matchStrings": ["(?:k3s_version|version): (?<currentValue>v\\d+\\.\\d+\\.\\d+\\+k3s\\d+)"],
+      "depNameTemplate": "k3s-io/k3s",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Our own app images are promoted by CI, not Renovate",
+      "matchPackageNames": ["/fumirai-lunch/"],
+      "enabled": false
+    },
+    {
+      "description": "Major bumps of platform components need a human",
+      "matchUpdateTypes": ["major"],
+      "labels": ["needs-review", "major"]
+    },
+    {
+      "description": "k3s: minor upgrades one at a time, never automerge",
+      "matchPackageNames": ["k3s-io/k3s"],
+      "separateMinorPatch": true,
+      "labels": ["k3s-upgrade"]
+    }
+  ]
+}

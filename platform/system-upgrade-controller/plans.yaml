@@ -1,0 +1,21 @@
+# Upgrading k3s = PR changing `version` below (keep ansible/group_vars/all.yml in sync).
+# Single node: the node is cordoned (not drained); restarting k3s does not
+# restart running pods, so apps stay up during the upgrade.
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: k3s-server
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  concurrency: 1
+  cordon: true
+  nodeSelector:
+    matchExpressions:
+      - { key: node-role.kubernetes.io/control-plane, operator: In, values: ["true"] }
+  tolerations:
+    - { key: CriticalAddonsOnly, operator: Exists }
+  serviceAccountName: system-upgrade
+  upgrade:
+    image: rancher/k3s-upgrade
+  version: v1.36.5+k3s1

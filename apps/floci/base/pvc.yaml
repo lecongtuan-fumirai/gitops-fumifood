@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: floci-data
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false   # never let GitOps delete state
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

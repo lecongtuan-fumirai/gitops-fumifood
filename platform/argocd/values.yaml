@@ -1,0 +1,90 @@
+# Argo CD values – minimal footprint for a single 3.8GB node.
+# Used both by bootstrap/bootstrap.sh (first install) and by the self-managed
+# Application platform/argocd (afterwards). Keep them identical.
+global:
+  priorityClassName: platform-critical
+
+crds:
+  keep: true
+
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  replicas: 1
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 96Mi }
+
+configs:
+  cm:
+    admin.enabled: "true"
+    exec.enabled: "false"
+    statusbadge.enabled: "false"
+    timeout.reconciliation: 300s
+    kustomize.buildOptions: "--enable-alpha-plugins --enable-exec"
+    # Ignore noise that would otherwise flap apps OutOfSync
+    resource.exclusions: |
+      - apiGroups: ["cilium.io", "velero.io"]
+        kinds: ["*"]
+        clusters: ["*"]
+  params:
+    server.insecure: true                  # UI reached only through SSH tunnel
+    controller.status.processors: 10
+    controller.operation.processors: 5
+    controller.repo.server.timeout.seconds: 120
+    reposerver.parallelism.limit: 2        # cap concurrent renders => cap RAM spikes
+
+redis:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 96Mi }
+
+server:
+  replicas: 1
+  resources:
+    requests: { cpu: 20m, memory: 48Mi }
+    limits: { memory: 192Mi }
+
+controller:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 192Mi }
+    limits: { memory: 512Mi }
+
+repoServer:
+  replicas: 1
+  resources:
+    requests: { cpu: 30m, memory: 96Mi }
+    limits: { memory: 384Mi }
+  env:
+    - name: SOPS_AGE_KEY_FILE
+      value: /sops/age/keys.txt
+    - name: XDG_CONFIG_HOME
+      value: /.config
+  volumes:
+    - name: custom-tools
+      emptyDir: {}
+    - name: sops-age
+      secret:
+        secretName: sops-age
+  initContainers:
+    - name: install-ksops
+      image: viaductoss/ksops:v4.5.1
+      command: ["/bin/sh", "-c"]
+      args:
+        - cp /usr/local/bin/ksops /custom-tools/ && cp /usr/local/bin/kustomize /custom-tools/
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools
+  volumeMounts:
+    - mountPath: /usr/local/bin/kustomize
+      name: custom-tools
+      subPath: kustomize
+    - mountPath: /usr/local/bin/ksops
+      name: custom-tools
+      subPath: ksops
+    - mountPath: /sops/age
+      name: sops-age
+      readOnly: true

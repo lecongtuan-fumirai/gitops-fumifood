@@ -1,0 +1,46 @@
+# platform: shared infrastructure, may create cluster-scoped resources.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Shared platform components (ingress, certs, GitOps, upgrades)
+  sourceRepos:
+    - git@github.com:fumirai-ltd/platform-gitops.git
+    - https://argoproj.github.io/argo-helm
+    - https://charts.jetstack.io
+    - https://traefik.github.io/charts
+    - https://github.com/rancher/system-upgrade-controller
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+# apps: workloads. Namespaced resources only, only into <app>-staging / <app>-prod.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  description: Application workloads
+  sourceRepos:
+    - git@github.com:fumirai-ltd/platform-gitops.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*-staging"
+    - server: https://kubernetes.default.svc
+      namespace: "*-prod"
+  clusterResourceWhitelist: []
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange
+    - group: networking.k8s.io
+      kind: NetworkPolicy        # baseline policies are owned by platform/namespaces
+  orphanedResources:
+    warn: true

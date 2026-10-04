@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: fumirai-lunch-prod
+resources:
+  - ../../base
+generators:
+  - secret-generator.yaml
+images:
+  # Promotion = change tag+digest here via reviewed PR.
+  # TODO(phase 0): switch to ghcr.io/fumirai-ltd/* once CI publishes there.
+  - name: fumirai-lunch-backend
+    newName: docker.io/lecongtuan/fumirai-lunch-backend
+    newTag: latest
+    digest: sha256:9dc893913ad6a8f8413d4bb7ebe90933b4f3867f086a78fa24401fe58369e1af
+  - name: fumirai-lunch-frontend
+    newName: docker.io/lecongtuan/fumirai-lunch-frontend
+    newTag: latest
+    digest: sha256:96b7780ec51cf3f12f7927edbdc55bf6439726df0ea14169c86f42863ca8385d
+patches:
+  - target: { kind: Ingress, name: fumirai-lunch }
+    patch: |-
+      - { op: replace, path: /spec/rules/0/host, value: fumifood.dpdns.org }
+      - { op: replace, path: /spec/tls/0/hosts/0, value: fumifood.dpdns.org }
+  - target: { kind: Deployment }
+    patch: |-
+      - { op: replace, path: /spec/template/spec/priorityClassName, value: workload-prod }

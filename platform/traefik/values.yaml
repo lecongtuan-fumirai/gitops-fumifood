@@ -1,0 +1,79 @@
+# Traefik (chart 41.x / Traefik v3.7). Single replica, LoadBalancer via k3s klipper svclb.
+#
+# MIGRATION STATE: "transition"
+#   Host nginx still owns :80/:443 and forwards to Traefik on :8080 (HTTP).
+#   Phase 5 cutover PR: set web.exposedPort=80, websecure.exposedPort=443 and
+#   enable the web -> websecure redirection (see commented block).
+deployment:
+  replicas: 1
+priorityClassName: platform-critical
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { memory: 192Mi }
+
+service:
+  type: LoadBalancer
+  spec:
+    externalTrafficPolicy: Local          # preserve client source IP
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true             # shared Middleware traefik/security-headers
+  kubernetesIngress:
+    enabled: true
+    publishedService:
+      enabled: true
+
+ingressRoute:
+  dashboard:
+    enabled: false
+
+log:
+  level: INFO
+# accessLog: left at chart default (disabled) to save CPU/IO
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 8080                     # TRANSITION; cutover => 80
+    forwardedHeaders:
+      # host nginx (127.0.0.1 / node IP / cni0) forwards X-Forwarded-Proto=https
+      trustedIPs: ["127.0.0.1/32", "10.42.0.0/16", "13.140.183.90/32"]
+    transport:
+      respondingTimeouts:
+        readTimeout: 0                    # large uploads / websockets
+        writeTimeout: 0
+        idleTimeout: 600s
+    # http:                               # CUTOVER: enable
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+    #       permanent: true
+  websecure:
+    port: 8443
+    exposedPort: 8443                     # TRANSITION; cutover => 443
+    http:
+      tls:
+        enabled: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
+        idleTimeout: 600s
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities: { drop: [ALL] }
+  readOnlyRootFilesystem: true
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile: { type: RuntimeDefault }

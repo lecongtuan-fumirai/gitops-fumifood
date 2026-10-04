@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# fumirai-lunch-prod
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fumirai-lunch-prod
+  labels:
+    env: production
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+  namespace: fumirai-lunch-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 20m, memory: 32Mi }
+      default: { memory: 256Mi }
+      max: { memory: 1Gi }
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: fumirai-lunch-prod
+spec:
+  hard:
+    requests.memory: 768Mi
+    limits.memory: 2Gi
+    pods: "10"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: baseline
+  namespace: fumirai-lunch-prod
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}                       # intra-namespace (frontend -> backend)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+---
+# ---------------------------------------------------------------------------
+# fumirai-lunch-staging
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fumirai-lunch-staging
+  labels:
+    env: staging
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+  namespace: fumirai-lunch-staging
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 10m, memory: 32Mi }
+      default: { memory: 192Mi }
+      max: { memory: 512Mi }
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: fumirai-lunch-staging
+spec:
+  hard:
+    requests.memory: 384Mi
+    limits.memory: 768Mi
+    pods: "6"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: baseline
+  namespace: fumirai-lunch-staging
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik

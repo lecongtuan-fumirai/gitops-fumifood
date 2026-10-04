@@ -1,0 +1,92 @@
+---
+- name: K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: API server audit policy (metadata level, skip noisy read-only traffic)
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/audit-policy.yaml
+    mode: "0600"
+    content: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      omitStages: ["RequestReceived"]
+      rules:
+        - level: None
+          verbs: ["get", "list", "watch"]
+        - level: None
+          users: ["system:kube-proxy", "system:apiserver"]
+        - level: None
+          resources:
+            - group: "coordination.k8s.io"
+              resources: ["leases"]
+        - level: Metadata
+          resources:
+            - group: ""
+              resources: ["secrets", "configmaps"]
+        - level: Metadata
+  register: k3s_audit
+
+- name: K3s server config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  register: k3s_config
+
+- name: Detect installed k3s version
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Download k3s installer
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0755"
+
+- name: Install / upgrade k3s to pinned version
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: server
+  when: k3s_version not in (k3s_installed.stdout | default(''))
+  register: k3s_install
+
+- name: Restart k3s on config change (running pods are not restarted)
+  ansible.builtin.systemd:
+    name: k3s
+    state: restarted
+  when: (k3s_config is changed or k3s_audit is changed) and k3s_install is skipped
+
+- name: Ensure k3s is enabled and running
+  ansible.builtin.systemd:
+    name: k3s
+    enabled: true
+    state: started
+
+- name: Wait for node Ready
+  ansible.builtin.command: >
+    k3s kubectl wait node/{{ k3s_node_name }} --for=condition=Ready --timeout=180s
+  register: node_ready
+  retries: 10
+  delay: 10
+  until: node_ready.rc == 0
+  changed_when: false
+
+- name: Root kubeconfig
+  ansible.builtin.file:
+    path: /root/.kube
+    state: directory
+    mode: "0700"
+
+- name: Link kubeconfig
+  ansible.builtin.file:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /root/.kube/config
+    state: link
+    force: true

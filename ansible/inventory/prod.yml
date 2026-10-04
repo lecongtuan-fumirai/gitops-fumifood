@@ -1,0 +1,12 @@
+all:
+  children:
+    k3s_servers:
+      hosts:
+        vn1-01:
+          ansible_host: 13.140.183.90
+          # Playbook is currently executed on the node itself.
+          ansible_connection: local
+    # k3s_agents:
+    #   hosts:
+    #     vn1-02:
+    #       ansible_host: <same-DC private/public IP>

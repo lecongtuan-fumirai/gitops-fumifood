@@ -1,0 +1,25 @@
+# Under memory pressure the kubelet evicts lower priority pods first:
+#   platform-critical (ingress, certs, GitOps) > workload-prod > workload-standard
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: platform-critical
+value: 1000000
+globalDefault: false
+description: Ingress, cert-manager, Argo CD. Must survive memory pressure.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: workload-prod
+value: 100000
+globalDefault: false
+description: Production workloads.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: workload-standard
+value: 1000
+globalDefault: true
+description: Default for everything else (staging, tools). Evicted first.

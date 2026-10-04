@@ -1,0 +1,6 @@
+creation_rules:
+  # Kubernetes Secrets: only data/stringData values are encrypted, keys stay reviewable.
+  - path_regex: .*\.enc\.ya?ml$
+    encrypted_regex: ^(data|stringData)$
+    age: >-
+      age1xgxn7hsah8vkxpsvgu38skcrv50ddzdw0hd69wzm02m7pzmecycs4nddp8

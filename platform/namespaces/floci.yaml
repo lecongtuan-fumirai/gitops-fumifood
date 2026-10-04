@@ -1,0 +1,48 @@
+# floci needs a privileged Docker-in-Docker sidecar (ADR-11). This is the only
+# privileged workload namespace; it is fenced by quota + NetworkPolicy.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: floci-prod
+  labels:
+    env: production
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults
+  namespace: floci-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 20m, memory: 32Mi }
+      default: { memory: 256Mi }
+      max: { memory: 1536Mi }
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: floci-prod
+spec:
+  hard:
+    requests.memory: 768Mi
+    limits.memory: 2Gi
+    pods: "6"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: baseline
+  namespace: floci-prod
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik

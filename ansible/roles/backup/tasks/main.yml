@@ -1,0 +1,60 @@
+---
+- name: Install backup dependencies
+  ansible.builtin.apt:
+    name: [sqlite3, rclone, zstd]
+    state: present
+
+- name: Verify age binary is present (installed from upstream release, not in jammy apt)
+  ansible.builtin.command: age --version
+  changed_when: false
+
+- name: Backup directory
+  ansible.builtin.file:
+    path: "{{ backup_local_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Backup script
+  ansible.builtin.template:
+    src: k3s-backup.sh.j2
+    dest: /usr/local/sbin/k3s-backup
+    mode: "0750"
+
+- name: Backup systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-backup.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Backup k3s SQLite datastore, server secrets and local-path PVCs
+      After=k3s.service
+      [Service]
+      Type=oneshot
+      Nice=10
+      IOSchedulingClass=idle
+      ExecStart=/usr/local/sbin/k3s-backup
+  notify: Reload systemd
+
+- name: Backup systemd timer
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-backup.timer
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Periodic k3s backup
+      [Timer]
+      OnCalendar={{ backup_schedule }}
+      RandomizedDelaySec=300
+      Persistent=true
+      [Install]
+      WantedBy=timers.target
+  notify: Reload systemd
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable backup timer
+  ansible.builtin.systemd:
+    name: k3s-backup.timer
+    enabled: true
+    state: started

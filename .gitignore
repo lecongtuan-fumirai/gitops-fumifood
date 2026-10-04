@@ -1,0 +1,8 @@
+# Never commit plaintext key material or decrypted secrets
+*.key
+age.key
+*.dec.yaml
+*.dec.env
+.env
+*.retry
+.vault_pass

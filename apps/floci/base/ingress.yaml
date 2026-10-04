@@ -1,0 +1,61 @@
+# Routing mirrors the previous host nginx vhost chungkhoanai.dpdns.org:
+#   UI paths            -> floci-ui:4500
+#   everything else     -> floci:4566 (AWS API emulator)
+#   /_floci/ui[/]       -> 302 /console/aws
+# No body size limit / buffering in Traefik => S3 multipart uploads up to 5GB work.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: floci
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-security-headers@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [HOST_PLACEHOLDER]
+      secretName: floci-tls
+  rules:
+    - host: HOST_PLACEHOLDER
+      http:
+        paths:
+          - { path: /console,            pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /cloud-explorer,     pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /settings,           pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /secretsmanager,     pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /dashboard,          pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /assets,             pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /api/clouds,         pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /api/eks,            pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /api/ec2,            pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /api/secretsmanager, pathType: Prefix, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /,                   pathType: Prefix, backend: { service: { name: floci,    port: { name: api } } } }
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ui-redirect
+spec:
+  redirectRegex:
+    regex: ^https?://([^/]+)/_floci/ui/?$
+    replacement: https://${1}/console/aws
+    permanent: false
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: floci-ui-redirect
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      traefik-security-headers@kubernetescrd,floci-prod-ui-redirect@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [HOST_PLACEHOLDER]
+      secretName: floci-tls
+  rules:
+    - host: HOST_PLACEHOLDER
+      http:
+        paths:
+          - { path: /_floci/ui,  pathType: Exact, backend: { service: { name: floci-ui, port: { name: http } } } }
+          - { path: /_floci/ui/, pathType: Exact, backend: { service: { name: floci-ui, port: { name: http } } } }

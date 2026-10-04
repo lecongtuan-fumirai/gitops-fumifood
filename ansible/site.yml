@@ -1,0 +1,11 @@
+---
+- name: K3s servers
+  hosts: k3s_servers
+  become: true
+  roles:
+    - role: hardening
+      tags: [hardening]
+    - role: k3s_server
+      tags: [k3s]
+    - role: backup
+      tags: [backup]

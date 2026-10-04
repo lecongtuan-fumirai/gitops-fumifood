@@ -1,0 +1,37 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      KUSTOMIZE: v5.5.0
+      KUBECONFORM: v0.6.7
+      YQ: v4.44.3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: { version: v3.16.2 }
+      - name: Install tools
+        run: |
+          curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE}/kustomize_${KUSTOMIZE}_linux_amd64.tar.gz" | sudo tar xz -C /usr/local/bin
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM}/kubeconform-linux-amd64.tar.gz" | sudo tar xz -C /usr/local/bin
+          sudo curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ}/yq_linux_amd64" && sudo chmod +x /usr/local/bin/yq
+      - name: Validate manifests
+        run: ./scripts/validate.sh
+      - name: Ansible syntax
+        run: |
+          pipx install ansible-core >/dev/null && ansible-galaxy collection install community.general ansible.posix >/dev/null
+          cd ansible && ansible-playbook site.yml --syntax-check

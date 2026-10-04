@@ -1,0 +1,23 @@
+crds:
+  enabled: true
+  keep: true
+global:
+  priorityClassName: platform-critical
+replicaCount: 1
+prometheus:
+  enabled: false
+resources:
+  requests: { cpu: 10m, memory: 48Mi }
+  limits: { memory: 160Mi }
+webhook:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 24Mi }
+    limits: { memory: 96Mi }
+cainjector:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 48Mi }
+    limits: { memory: 160Mi }
+startupapicheck:
+  enabled: false

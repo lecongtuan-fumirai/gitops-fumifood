@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: floci-prod
+resources:
+  - ../../base
+images:
+  - name: floci
+    newName: docker.io/floci/floci
+    newTag: "2.1.0"
+    digest: sha256:f5aa8c18302cedb4f2385f5c4e455b3efc77fee6bf7b6e5d1712b2817ba102db
+  - name: floci-ui
+    newName: docker.io/floci/floci-ui
+    newTag: latest
+    digest: sha256:f3a2d38bbc306409bcada19efba092721216f315dcb27c2658551d7d29d5f9bb
+  - name: dind
+    newName: docker.io/library/docker
+    newTag: 28-dind
+configMapGenerator:
+  - name: floci-config
+    literals:
+      - FLOCI_BASE_URL=https://chungkhoanai.dpdns.org
+      - FLOCI_HOSTNAME=chungkhoanai.dpdns.org
+  - name: floci-ui-config
+    literals:
+      - CORS_ALLOWED_ORIGINS=https://chungkhoanai.dpdns.org
+patches:
+  - target: { kind: Ingress }
+    patch: |-
+      - { op: replace, path: /spec/rules/0/host, value: chungkhoanai.dpdns.org }
+      - { op: replace, path: /spec/tls/0/hosts/0, value: chungkhoanai.dpdns.org }
+  - target: { kind: Deployment }
+    patch: |-
+      - { op: replace, path: /spec/template/spec/priorityClassName, value: workload-prod }

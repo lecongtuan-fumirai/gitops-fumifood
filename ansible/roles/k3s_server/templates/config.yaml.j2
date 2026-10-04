@@ -1,0 +1,32 @@
+# Managed by Ansible (platform-gitops/ansible/roles/k3s_server). Do not edit by hand.
+# Datastore: SQLite (kine). Measured disk fsync ~12ms is too slow for etcd.
+# Migrate to embedded etcd later by adding `cluster-init: true` and restarting.
+node-name: {{ k3s_node_name }}
+write-kubeconfig-mode: "0600"
+tls-san:
+{% for san in k3s_tls_sans %}
+  - "{{ san }}"
+{% endfor %}
+secrets-encryption: true
+flannel-backend: {{ k3s_flannel_backend }}
+cluster-cidr: {{ k3s_cluster_cidr }}
+service-cidr: {{ k3s_service_cidr }}
+disable:
+  - traefik          # managed by Argo CD (platform/traefik)
+kubelet-arg:
+  - "fail-swap-on=false"
+  - "system-reserved={{ k3s_system_reserved }}"
+  - "kube-reserved={{ k3s_kube_reserved }}"
+  - "eviction-hard={{ k3s_eviction_hard }}"
+  - "eviction-soft={{ k3s_eviction_soft }}"
+  - "eviction-soft-grace-period={{ k3s_eviction_soft_grace }}"
+  - "image-gc-high-threshold=80"
+  - "image-gc-low-threshold=60"
+  - "container-log-max-size=10Mi"
+  - "container-log-max-files=3"
+kube-apiserver-arg:
+  - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+  - "audit-log-maxage=7"
+  - "audit-log-maxsize=50"
+  - "audit-log-maxbackup=3"
+  - "audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"

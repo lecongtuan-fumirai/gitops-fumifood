@@ -1,0 +1,37 @@
+---
+# ---------------------------------------------------------------------------
+# Node baseline
+# ---------------------------------------------------------------------------
+swap_size_mb: 4096
+swap_file: /swapfile
+journald_max_use: 500M
+journald_retention: 14day
+
+# UFW is only enabled when explicitly requested: -e ufw_enable=true
+ufw_enable: false
+ufw_ssh_sources: ["any"]          # tighten to admin IPs when known
+ufw_public_tcp_ports: [80, 443]
+k3s_cluster_cidr: 10.42.0.0/16
+k3s_service_cidr: 10.43.0.0/16
+
+# ---------------------------------------------------------------------------
+# K3s
+# ---------------------------------------------------------------------------
+k3s_version: v1.36.5+k3s1
+k3s_node_name: vn1-01
+k3s_tls_sans: ["13.140.183.90"]
+k3s_flannel_backend: wireguard-native
+
+k3s_system_reserved: "cpu=250m,memory=400Mi"
+k3s_kube_reserved: "cpu=250m,memory=500Mi"
+k3s_eviction_hard: "memory.available<300Mi,nodefs.available<10%,imagefs.available<10%"
+k3s_eviction_soft: "memory.available<500Mi"
+k3s_eviction_soft_grace: "memory.available=1m"
+
+# ---------------------------------------------------------------------------
+# Backups (role only activates when /etc/k3s-backup.env exists)
+# ---------------------------------------------------------------------------
+backup_env_file: /etc/k3s-backup.env
+backup_schedule: "*-*-* 00/6:15:00"
+backup_local_dir: /var/backups/k3s
+backup_local_retention_days: 3

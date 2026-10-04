@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Managed by Ansible (platform-gitops/ansible/roles/backup).
+# Creates a consistent backup of:
+#   - k3s SQLite datastore (online .backup, safe while k3s runs)
+#   - k3s server token + TLS CA material (needed to restore the datastore)
+#   - local-path PVC data (/var/lib/rancher/k3s/storage)
+# Archive is age-encrypted when BACKUP_AGE_RECIPIENT is set, then uploaded to
+# S3-compatible storage (Cloudflare R2) when R2 settings are present.
+set -euo pipefail
+
+ENV_FILE="{{ backup_env_file }}"
+LOCAL_DIR="{{ backup_local_dir }}"
+LOCAL_RETENTION_DAYS="{{ backup_local_retention_days }}"
+[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+HOST=$(hostname -s)
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+DB=/var/lib/rancher/k3s/server/db/state.db
+mkdir -p "$WORK/k3s"
+sqlite3 "$DB" ".backup '$WORK/k3s/state.db'"
+sqlite3 "$WORK/k3s/state.db" "PRAGMA integrity_check;" | grep -qx ok
+
+cp -a /var/lib/rancher/k3s/server/token "$WORK/k3s/"
+tar -C /var/lib/rancher/k3s/server -cf "$WORK/k3s/server-tls-cred.tar" tls cred
+cp -a /etc/rancher/k3s/config.yaml "$WORK/k3s/"
+
+if [ -d /var/lib/rancher/k3s/storage ]; then
+  tar -C /var/lib/rancher/k3s -cf "$WORK/pvc-storage.tar" storage
+fi
+
+ARCHIVE="$LOCAL_DIR/k3s-${HOST}-${TS}.tar.zst"
+tar -C "$WORK" -I 'zstd -T0 -10' -cf "$ARCHIVE" .
+
+if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  age -r "$BACKUP_AGE_RECIPIENT" -o "$ARCHIVE.age" "$ARCHIVE"
+  rm -f "$ARCHIVE"
+  ARCHIVE="$ARCHIVE.age"
+fi
+chmod 600 "$ARCHIVE"
+
+if [ -n "${R2_ENDPOINT:-}" ] && [ -n "${R2_BUCKET:-}" ]; then
+  export RCLONE_CONFIG_R2_TYPE=s3
+  export RCLONE_CONFIG_R2_PROVIDER=Other
+  export RCLONE_CONFIG_R2_ENDPOINT="$R2_ENDPOINT"
+  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+  rclone copy --s3-no-check-bucket "$ARCHIVE" "r2:${R2_BUCKET}/k3s/${HOST}/"
+  rclone delete --min-age "${R2_RETENTION_DAYS:-14}d" "r2:${R2_BUCKET}/k3s/${HOST}/"
+  echo "uploaded $(basename "$ARCHIVE") to r2:${R2_BUCKET}/k3s/${HOST}/"
+else
+  echo "WARN: R2 not configured ($ENV_FILE); backup kept locally only" >&2
+fi
+
+find "$LOCAL_DIR" -name 'k3s-*' -mtime +"$LOCAL_RETENTION_DAYS" -delete
+echo "backup ok: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"

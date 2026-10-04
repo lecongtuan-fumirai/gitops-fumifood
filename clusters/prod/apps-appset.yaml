@@ -1,0 +1,51 @@
+# Every directory apps/<app>/overlays/<env> becomes Application "<app>-<env>"
+# deployed into namespace "<app>-<env>" (production => "<app>-prod").
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+        revision: main
+        directories:
+          - path: apps/*/overlays/*
+          # Staging is disabled until its Neon branch + DNS + OAuth callback exist.
+          # Remove this exclusion to enable it.
+          - path: apps/fumirai-lunch/overlays/staging
+            exclude: true
+  syncPolicy:
+    preserveResourcesOnDeletion: true      # deleting the AppSet never wipes workloads
+  template:
+    metadata:
+      name: '{{ index .path.segments 1 }}-{{ .path.basename }}'
+      labels:
+        app.kubernetes.io/part-of: '{{ index .path.segments 1 }}'
+        env: '{{ .path.basename }}'
+    spec:
+      project: apps
+      source:
+        repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+        targetRevision: main
+        path: '{{ .path.path }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ index .path.segments 1 }}-{{ if eq .path.basename "production" }}prod{{ else }}{{ .path.basename }}{{ end }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=false          # namespaces are owned by platform/namespaces
+          - ServerSideApply=true
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 3m
