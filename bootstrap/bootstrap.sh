@@ -22,7 +22,7 @@ test -s "$SOPS_AGE_KEY_FILE" || { echo "missing age key $SOPS_AGE_KEY_FILE"; exi
 test -s "$DEPLOY_KEY" || { echo "missing deploy key $DEPLOY_KEY"; exit 1; }
 
 log "PriorityClasses (Argo CD pods reference platform-critical)"
-kubectl apply --server-side -f "$ROOT/platform/namespaces/priority-classes.yaml"
+kubectl apply --server-side --force-conflicts -f "$ROOT/platform/namespaces/priority-classes.yaml"
 
 log "argocd namespace + SOPS age key"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -

@@ -8,7 +8,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  concurrency: 1
+  concurrency: 0
   cordon: true
   nodeSelector:
     matchExpressions:
