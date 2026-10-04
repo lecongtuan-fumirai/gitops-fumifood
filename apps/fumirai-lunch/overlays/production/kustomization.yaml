@@ -7,7 +7,6 @@ generators:
   - secret-generator.yaml
 images:
   # Promotion = change tag+digest here via reviewed PR.
-  # TODO(phase 0): switch to ghcr.io/fumirai-ltd/* once CI publishes there.
   - name: fumirai-lunch-backend
     newName: docker.io/lecongtuan/fumirai-lunch-backend
     newTag: latest
