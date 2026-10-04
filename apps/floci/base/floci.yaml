@@ -25,6 +25,7 @@ spec:
             - { name: api, containerPort: 4566 }
           env:
             - { name: DOCKER_HOST, value: tcp://127.0.0.1:2375 }
+            - { name: FLOCI_RUN_AS_ROOT, value: "true" }
             - { name: FLOCI_STORAGE_PERSISTENT_PATH, value: /app/data }
             - { name: FLOCI_SERVICES_UI_ENABLED, value: "false" }   # floci-ui is its own Deployment
             - { name: FLOCI_SECURITY_ALLOW_UNSAFE_NETWORK_EXPOSURE, value: "false" }
@@ -53,13 +54,8 @@ spec:
         - name: dind
           image: dind                            # set by overlay (tag + digest)
           args:
-            - --host=tcp://127.0.0.1:2375
-            - --host=unix:///var/run/docker.sock
+            - --tls=false
             - --log-level=warn
-            - --log-opt=max-size=10m
-            - --log-opt=max-file=2
-          env:
-            - { name: DOCKER_TLS_CERTDIR, value: "" }
           securityContext:
             privileged: true
           resources:
