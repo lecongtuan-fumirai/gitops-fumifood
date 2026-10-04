@@ -7,7 +7,7 @@ metadata:
 spec:
   description: Shared platform components (ingress, certs, GitOps, upgrades)
   sourceRepos:
-    - git@github.com:fumirai-ltd/platform-gitops.git
+    - git@github.com:lecongtuan-fumirai/gitops-fumifood.git
     - https://argoproj.github.io/argo-helm
     - https://charts.jetstack.io
     - https://traefik.github.io/charts
@@ -28,7 +28,7 @@ metadata:
 spec:
   description: Application workloads
   sourceRepos:
-    - git@github.com:fumirai-ltd/platform-gitops.git
+    - git@github.com:lecongtuan-fumirai/gitops-fumifood.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*-staging"

@@ -10,7 +10,7 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
-        repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+        repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
         revision: main
         directories:
           - path: apps/*/overlays/*
@@ -29,7 +29,7 @@ spec:
     spec:
       project: apps
       source:
-        repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+        repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
         targetRevision: main
         path: '{{ .path.path }}'
       destination:

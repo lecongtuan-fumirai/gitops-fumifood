@@ -10,7 +10,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+    repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
     targetRevision: main
     path: clusters/prod
   destination:

@@ -4,14 +4,14 @@
 # Prereqs:
 #   - k3s running (ansible-playbook ansible/site.yml)
 #   - age private key at $SOPS_AGE_KEY_FILE (default /root/.config/sops/age/keys.txt)
-#   - read-only deploy key for git@github.com:fumirai-ltd/platform-gitops.git at $DEPLOY_KEY
+#   - read-only deploy key for git@github.com:lecongtuan-fumirai/gitops-fumifood.git at $DEPLOY_KEY
 #
 # Idempotent: safe to re-run.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SOPS_AGE_KEY_FILE=${SOPS_AGE_KEY_FILE:-/root/.config/sops/age/keys.txt}
 DEPLOY_KEY=${DEPLOY_KEY:-/root/.ssh/argocd_platform_gitops}
-REPO_URL=git@github.com:fumirai-ltd/platform-gitops.git
+REPO_URL=git@github.com:lecongtuan-fumirai/gitops-fumifood.git
 ARGOCD_CHART_VERSION=$(yq '.spec.sources[0].targetRevision' "$ROOT/clusters/prod/platform/argocd.yaml")
 
 log() { printf '\n\033[1;34m>> %s\033[0m\n' "$*"; }

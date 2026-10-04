@@ -15,7 +15,7 @@ Apps are stateless except floci PVC; DB is Neon.
 ```bash
 # 1. New Ubuntu 22.04/24.04 VPS, point DNS A records to the new IP
 apt-get update && apt-get install -y git ansible
-git clone git@github.com:fumirai-ltd/platform-gitops.git /opt/platform-gitops && cd /opt/platform-gitops
+git clone git@github.com:lecongtuan-fumirai/gitops-fumifood.git /opt/platform-gitops && cd /opt/platform-gitops
 # 2. Node + k3s (update ansible_host / tls_sans first if IP changed)
 cd ansible && ansible-playbook site.yml && cd ..
 # 3. Restore age key + deploy key, then bootstrap Argo CD

@@ -17,7 +17,7 @@ spec:
       helm:
         releaseName: argocd
         valueFiles: [$values/platform/argocd/values.yaml]
-    - repoURL: git@github.com:fumirai-ltd/platform-gitops.git
+    - repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
       targetRevision: main
       ref: values
   destination:
