@@ -21,7 +21,7 @@ spec:
             pathType: Prefix
             backend: { service: { name: backend, port: { name: http } } }
           - path: /health
-            pathType: Exact
+            pathType: Prefix
             backend: { service: { name: backend, port: { name: http } } }
           - path: /
             pathType: Prefix
