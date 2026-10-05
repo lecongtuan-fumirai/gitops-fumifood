@@ -18,7 +18,7 @@ k3s_service_cidr: 10.43.0.0/16
 # K3s
 # ---------------------------------------------------------------------------
 k3s_version: v1.36.5+k3s1
-k3s_node_name: vn1-01
+k3s_node_name: vmi3371043
 k3s_tls_sans: ["13.140.183.90"]
 k3s_flannel_backend: wireguard-native
 
