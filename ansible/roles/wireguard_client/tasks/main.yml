@@ -1,0 +1,58 @@
+---
+# WireGuard client: vn1-01 -> monitoring hub (miniappify).
+#
+# Two-step bootstrap (keys never leave the hosts):
+#   1. Run with wg_hub_public_key empty -> generates this node's keypair and
+#      prints its public key. Add it as a peer on the hub.
+#   2. Set wg_hub_public_key (hub's public key, not secret) and run again ->
+#      renders the config and brings the tunnel up.
+- name: Install wireguard-tools
+  ansible.builtin.apt:
+    name: wireguard-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: WireGuard config directory
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    mode: "0700"
+    owner: root
+    group: root
+
+- name: Generate private key (once)
+  ansible.builtin.shell: |
+    umask 077
+    wg genkey > /etc/wireguard/{{ wg_hub_interface }}.key
+  args:
+    creates: "/etc/wireguard/{{ wg_hub_interface }}.key"
+
+- name: Derive public key
+  ansible.builtin.shell: "wg pubkey < /etc/wireguard/{{ wg_hub_interface }}.key"
+  register: wg_pubkey
+  changed_when: false
+  check_mode: false
+
+- name: Show this node's public key (add it as a peer on the hub)
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} public key: {{ wg_pubkey.stdout }}  -> hub peer AllowedIPs = {{ wg_hub_address }}"
+
+- name: Stop here until the hub public key is known
+  ansible.builtin.meta: end_host
+  when: wg_hub_public_key | length == 0
+
+- name: Render tunnel config
+  ansible.builtin.template:
+    src: wg-hub.conf.j2
+    dest: "/etc/wireguard/{{ wg_hub_interface }}.conf"
+    mode: "0600"
+    owner: root
+    group: root
+  notify: Restart wg-hub
+
+- name: Enable tunnel on boot
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wg_hub_interface }}"
+    enabled: true
+    state: started

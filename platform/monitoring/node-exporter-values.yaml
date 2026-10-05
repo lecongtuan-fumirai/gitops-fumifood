@@ -1,0 +1,34 @@
+# prometheus-node-exporter 4.59.0 (node_exporter v1.12.1)
+# Host metrics for vn1-01. hostNetwork => listens on node:9100; public access is
+# blocked by UFW (default deny incoming), only pods (vmagent) reach it.
+priorityClassName: platform-critical
+
+resources:
+  requests: { cpu: 10m, memory: 24Mi }
+  limits: { memory: 64Mi }
+
+extraArgs:
+  - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/containerd/.+|run/k3s/.+|var/lib/docker/.+|var/lib/kubelet/.+|var/lib/rancher/k3s/agent/containerd/.+)($|/)
+  - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|erofs|tmpfs)$
+  - --collector.netclass.ignored-devices=^(veth.*|cni0|flannel.*|docker0)$
+  - --collector.netdev.device-exclude=^(veth.*|lo)$
+  # not useful on a VM, saves CPU per scrape
+  - --no-collector.hwmon
+  - --no-collector.thermal_zone
+  - --no-collector.nvme
+  - --no-collector.btrfs
+  - --no-collector.zfs
+  - --no-collector.infiniband
+  - --no-collector.fibrechannel
+  - --no-collector.tapestats
+  - --no-collector.watchdog
+
+# vmagent discovers it through the Service endpoints
+service:
+  enabled: true
+  labels:
+    jobLabel: node-exporter
+
+prometheus:
+  monitor:
+    enabled: false

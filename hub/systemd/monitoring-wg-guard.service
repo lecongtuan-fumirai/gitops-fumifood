@@ -1,0 +1,17 @@
+# Install: cp hub/systemd/monitoring-wg-guard.service /etc/systemd/system/
+#          (adjust ExecStart path if the repo is not in /opt/platform-gitops)
+[Unit]
+Description=Restrict vn1-01 WireGuard peer to VictoriaMetrics ingest
+After=docker.service wg-quick@wg0.service
+Requires=docker.service
+# re-apply after every docker restart
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/platform-gitops/hub/scripts/wg-guard.sh up
+ExecStop=/opt/platform-gitops/hub/scripts/wg-guard.sh down
+
+[Install]
+WantedBy=docker.service

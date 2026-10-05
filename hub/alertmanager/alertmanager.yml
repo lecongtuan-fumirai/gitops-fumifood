@@ -1,0 +1,72 @@
+# Alertmanager for the Fumirai platform.
+# Secrets/per-host values are read from files (never inline): bot token,
+# chat id, healthchecks URL. Create them with scripts/init-secrets.sh.
+global:
+  resolve_timeout: 5m
+
+templates:
+  - /etc/alertmanager/telegram.tmpl
+
+route:
+  receiver: telegram
+  group_by: [alertname, cluster, namespace]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Dead man's switch: ping healthchecks.io every minute while the pipeline lives
+    - matchers: ['alertname="Watchdog"']
+      receiver: healthchecks
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
+
+    - matchers: ['severity="critical"']
+      receiver: telegram
+      group_wait: 10s
+      repeat_interval: 1h
+
+    - matchers: ['severity="warning"']
+      receiver: telegram
+      repeat_interval: 12h
+
+inhibit_rules:
+  # Whole cluster unreachable: silence every other prod alert
+  - source_matchers: ['alertname="ProdMetricsAbsent"']
+    target_matchers: ['cluster="prod"', 'alertname!="ProdMetricsAbsent"', 'alertname!="EndpointDown"', 'alertname!="HostUnreachable"']
+  # Host unreachable by ping => its endpoints are down too; keep only the root cause
+  - source_matchers: ['alertname="HostUnreachable"']
+    target_matchers: ['alertname=~"EndpointDown|EndpointHTTPError|EndpointSlow|ProdMetricsAbsent"']
+  # Node NotReady explains pod-level alerts
+  - source_matchers: ['alertname="KubeNodeNotReady"']
+    target_matchers: ['alertname=~"KubePod.*|KubeDeployment.*|KubeStatefulSet.*|KubeDaemonSet.*"']
+  # Critical supersedes the warning tier of the SAME alert family only.
+  # (A generic severity rule would be wrong: labels missing on both sides
+  # compare equal, so one critical would mute unrelated warnings.)
+  - source_matchers: ['alertname="HostMemoryCritical"']
+    target_matchers: ['alertname="HostMemoryLow"']
+    equal: [cluster, node]
+  - source_matchers: ['alertname="HostDiskCritical"']
+    target_matchers: ['alertname=~"HostDiskLow|HostDiskWillFillIn24h"']
+    equal: [cluster, node, mountpoint]
+  - source_matchers: ['alertname="CertificateExpiryCritical"']
+    target_matchers: ['alertname="CertificateExpiringSoon"']
+    equal: [namespace, name]
+  - source_matchers: ['alertname="HubTSDBDiskCritical"']
+    target_matchers: ['alertname="HubTSDBDiskLow"']
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token_file: /run/secrets/telegram_bot_token
+        chat_id_file: /run/secrets/telegram_chat_id   # group ids are negative
+        parse_mode: HTML
+        message: '{{ template "telegram.message" . }}'
+        send_resolved: true
+        disable_notifications: false
+
+  - name: healthchecks
+    webhook_configs:
+      - url_file: /run/secrets/healthchecks_url
+        send_resolved: false
+        max_alerts: 1

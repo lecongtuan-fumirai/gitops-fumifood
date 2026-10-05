@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: vmagent-remote-write
+    namespace: monitoring
+type: Opaque
+stringData:
+    username: ENC[AES256_GCM,data:SngD4gTq5Q==,iv:qGRKYjlRQJ2axSc7eJBEjdKOi24nXu1OSDJZrsbPTiI=,tag:tvIx1YUt+69D+r8ItVih2A==,type:str]
+    password: ENC[AES256_GCM,data:Gd/qZOuSZm9dvOKHGQUET8LTqfm4Wl5EyJlZoAkEiSg9cEtJQT7vLw==,iv:uChxXO33oJdZ264gdijtKwx7Qc079jv6EXSw53dwDSg=,tag:ErPMLTqHo07zFtTnD0I4dA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrNXZ1amxlWnBXVVljcER1
+            cXpRcFp0UjBpZmpDSDgrcXFiODBzT1JDZUZJCnY3NEt1blZzeWx2cEtLcXNiZlMx
+            Mld3Z3RMRGEvRHltRWtHNVJuUFRJL00KLS0tIFYwWVcxaEdnV3hLNDh1WUlHcTI2
+            TzF2c3prclpmZXVLMnRjUEs3YUFTdk0KvzGULkv59onK3tje5GO/4dKM4rjpngZl
+            Sndk09XL+hOkAnYxtwrWfosgDMXU73A7c6gXQmGz6bcmpWkpbX6fiA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1xgxn7hsah8vkxpsvgu38skcrv50ddzdw0hd69wzm02m7pzmecycs4nddp8
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-05T15:06:37Z"
+    mac: ENC[AES256_GCM,data:uUD17hd8sLI6dz+FrmLAmgX4jiBtBOfg9qmyENGBfm7ny3DeQ7X691tdE7alpTX9tviF16gcX+MBcq2OtU5xub/gifdaEsqchQ8XN7x5q2x82wioYKO3H1jOsjKmHoYulQsfscKN4dPQZ+X0qIqNQKwzCTt5VQ1f1a8emYF5fu8=,iv:kDxYxRvw3LlAJ5mM0nnz32ayfuBj0j+bibAvSBDgmJs=,tag:9XLvb9tShv2yptkWQFGnMQ==,type:str]
+    version: 3.13.3

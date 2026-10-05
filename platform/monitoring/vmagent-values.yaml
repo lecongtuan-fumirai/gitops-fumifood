@@ -1,0 +1,172 @@
+# victoria-metrics-agent 0.49.0 (vmagent v1.153.0)
+#
+# Push model: scrape locally (sub-ms latency) -> compress -> remote_write over
+# WireGuard to the hub (miniappify 10.66.66.1, ~250 ms RTT EU<->VN).
+# If the tunnel or the hub is down, samples are queued on the PVC and replayed
+# with original timestamps once the link is back (no gaps in Grafana).
+mode: statefulSet
+
+priorityClassName: platform-critical
+
+resources:
+  requests: { cpu: 30m, memory: 128Mi }
+  limits: { memory: 320Mi }
+
+persistentVolume:
+  enabled: true
+  storageClassName: local-path
+  size: 2Gi
+
+remoteWrite:
+  - url: http://10.66.66.1:8428/api/v1/write
+    basicAuth.username: vmagent
+    basicAuth.passwordFile: /etc/vmagent/remote-write/password
+    # keep a safety margin below the 2Gi PVC; oldest data is dropped first
+    maxDiskUsagePerURL: 1536MB
+
+extraArgs:
+  envflag.enable: true
+  envflag.prefix: VM_
+  loggerFormat: json
+  remoteWrite.label: cluster=prod
+  # bigger, less frequent batches suit a high-latency link
+  remoteWrite.flushInterval: 5s
+  # lower memory: parse scrape responses in a streaming fashion
+  promscrape.streamParse: true
+  promscrape.dropOriginalLabels: true
+  # never let a slow target hold a scrape slot for long
+  promscrape.maxScrapeSize: 32MB
+
+extraVolumes:
+  - name: remote-write-auth
+    secret:
+      secretName: vmagent-remote-write
+      defaultMode: 0400
+extraVolumeMounts:
+  - name: remote-write-auth
+    mountPath: /etc/vmagent/remote-write
+    readOnly: true
+
+service:
+  enabled: false
+
+config:
+  global:
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  scrape_configs:
+    - job_name: vmagent
+      static_configs:
+        - targets: ["localhost:8429"]
+
+    # ------------------------------------------------------------------
+    # K3s note: apiserver, kubelet, scheduler and controller-manager run in
+    # ONE process sharing one metrics registry, so /metrics on 6443 and on
+    # 10250 return the same huge payload. Each job keeps a strict allowlist.
+    # ------------------------------------------------------------------
+    - job_name: apiserver
+      scheme: https
+      kubernetes_sd_configs:
+        - role: endpoints
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          action: keep
+          regex: apiserver_request_total|apiserver_current_inflight_requests|apiserver_storage_objects|apiserver_flowcontrol_rejected_requests_total|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines
+
+    - job_name: kubelet
+      scheme: https
+      kubernetes_sd_configs:
+        - role: node
+      tls_config:
+        # kubelet serving cert is self-signed by k3s; token auth still applies
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_node_name]
+          target_label: node
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          action: keep
+          regex: kubelet_volume_stats_(available|capacity|used)_bytes|kubelet_volume_stats_inodes(_free|_used)?|kubelet_running_(pods|containers)|kubelet_node_name|kubelet_evictions|kubelet_pleg_relist_duration_seconds_(sum|count)
+
+    - job_name: cadvisor
+      scheme: https
+      metrics_path: /metrics/cadvisor
+      honor_timestamps: false
+      kubernetes_sd_configs:
+        - role: node
+      tls_config:
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_node_name]
+          target_label: node
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          action: keep
+          regex: container_cpu_usage_seconds_total|container_cpu_cfs_(throttled_)?periods_total|container_memory_working_set_bytes|container_memory_rss|container_memory_swap|container_oom_events_total|container_spec_memory_limit_bytes|container_network_(receive|transmit)_(bytes|packets_dropped)_total|container_fs_(reads|writes)_bytes_total|machine_memory_bytes|machine_cpu_cores
+        # keep pod-level series and the node root cgroup, drop systemd slices
+        - source_labels: [pod, id]
+          action: keep
+          regex: .+;.*|;/
+
+    - job_name: node-exporter
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces: { names: [monitoring] }
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+          action: keep
+          regex: prometheus-node-exporter
+        - source_labels: [__meta_kubernetes_endpoint_node_name]
+          target_label: node
+      metric_relabel_configs:
+        # per-CPU guest time and scheduler stats are rarely used
+        - source_labels: [__name__]
+          action: drop
+          regex: node_cpu_guest_seconds_total|node_schedstat_.*|node_softnet_.*|node_scrape_collector_.*
+
+    - job_name: kube-state-metrics
+      honor_labels: true
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces: { names: [monitoring] }
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: kube-state-metrics;http
+
+    # Platform components that already expose a container port named
+    # "metrics"/"http-metrics": Traefik, Argo CD, cert-manager, CoreDNS.
+    - job_name: platform-pods
+      kubernetes_sd_configs:
+        - role: pod
+          namespaces: { names: [traefik, argocd, cert-manager, kube-system] }
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          action: keep
+          regex: metrics|http-metrics
+        - source_labels: [__meta_kubernetes_pod_phase]
+          action: drop
+          regex: Pending|Succeeded|Failed
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_k8s_app]
+          separator: ""
+          target_label: job
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+      metric_relabel_configs:
+        # Drop Go runtime noise and controller-internal histograms nobody graphs
+        # on a single node. Traefik latency buckets are kept (p95 panels/alerts).
+        - source_labels: [__name__]
+          action: drop
+          regex: go_gc_.*|go_memstats_.*|go_sched_.*|go_cpu_.*|rest_client_.*|workqueue_.*|controller_runtime_.*_bucket|certmanager_http_acme_client_request_duration_seconds_bucket|argocd_.*_bucket|grpc_server_handling_seconds_bucket|coredns_dns_(request|response)_size_bytes_bucket

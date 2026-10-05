@@ -1,0 +1,105 @@
+# Monitoring agents (push model). This cluster only *collects* metrics and
+# ships them over WireGuard to the hub (miniappify, 10.66.66.1). Storage,
+# alerting and Grafana run on the hub so they keep working if this node dies.
+# Data path: exporters -> vmagent (disk buffer) -> remote_write -> VictoriaMetrics.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
+    targetRevision: main
+    path: platform/monitoring/config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: node-exporter
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: prometheus-node-exporter
+      targetRevision: 4.59.0
+      helm:
+        releaseName: node-exporter
+        valueFiles: [$values/platform/monitoring/node-exporter-values.yaml]
+    - repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-state-metrics
+      targetRevision: 8.6.0
+      helm:
+        releaseName: kube-state-metrics
+        valueFiles: [$values/platform/monitoring/kube-state-metrics-values.yaml]
+    - repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vmagent
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: platform
+  sources:
+    - repoURL: https://victoriametrics.github.io/helm-charts
+      chart: victoria-metrics-agent
+      targetRevision: 0.49.0
+      helm:
+        releaseName: vmagent
+        valueFiles: [$values/platform/monitoring/vmagent-values.yaml]
+    - repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]

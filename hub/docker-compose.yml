@@ -1,0 +1,214 @@
+# Monitoring hub for the Fumirai platform. Runs on miniappify (VN VPS).
+#
+#   vn1-01 (K3s, EU) --vmagent remote_write over WireGuard--> victoriametrics (10.66.66.1:8428)
+#   vmalert -> alertmanager -> Telegram ; Watchdog -> healthchecks.io (dead man's switch)
+#   grafana -> victoriametrics
+#
+# Budget (hard caps, see mem_limit): ~1.2 GiB RAM, ~3 GB disk with 30d retention.
+# All images pinned by tag + digest (repo golden rule #2). Bump via PR.
+name: monitoring
+
+x-logging: &logging
+  # per-service rotation; does NOT require touching /etc/docker/daemon.json
+  # (restarting dockerd would restart n8n/postgres/redis on this host)
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-defaults: &defaults
+  restart: unless-stopped
+  logging: *logging
+  networks: [monitoring]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  victoriametrics:
+    <<: *defaults
+    image: victoriametrics/victoria-metrics:v1.153.0@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=30d
+      # stop accepting writes (read-only) before the disk is full
+      - -storage.minFreeDiskSpaceBytes=2GB
+      # vmagent may replay buffered data; keep one sample per 30s per series
+      - -dedup.minScrapeInterval=30s
+      - -promscrape.config=/etc/vm/scrape.yml
+      - -promscrape.config.strictParse=true
+      - -selfScrapeInterval=30s
+      - -httpAuth.username=vmagent
+      - -httpAuth.password=file:///run/secrets/vm_password
+      - -search.maxQueryDuration=60s
+      - -loggerFormat=json
+    volumes:
+      - vm-data:/storage
+      - ./victoriametrics/scrape.yml:/etc/vm/scrape.yml:ro
+      - ./secrets/vm_password:/run/secrets/vm_password:ro
+    ports:
+      # ingest from vn1-01 over WireGuard + local admin access. Never 0.0.0.0.
+      - "10.66.66.1:8428:8428"
+      - "127.0.0.1:8428:8428"
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+
+  vmalert:
+    <<: *defaults
+    image: victoriametrics/vmalert:v1.153.0@sha256:0c1c7718b54b03e8559d0f257f31f1bd79ef7fa32ac6e9ed90d7b92a74a4fe76
+    command:
+      - -rule=/etc/vmalert/rules/*.yml
+      - -rule.validateTemplates=true
+      - -evaluationInterval=30s
+      - -datasource.url=http://victoriametrics:8428
+      - -datasource.basicAuth.username=vmagent
+      - -datasource.basicAuth.passwordFile=/run/secrets/vm_password
+      # persist alert state (ALERTS series) so restarts don't re-fire everything
+      - -remoteWrite.url=http://victoriametrics:8428
+      - -remoteWrite.basicAuth.username=vmagent
+      - -remoteWrite.basicAuth.passwordFile=/run/secrets/vm_password
+      - -remoteRead.url=http://victoriametrics:8428
+      - -remoteRead.basicAuth.username=vmagent
+      - -remoteRead.basicAuth.passwordFile=/run/secrets/vm_password
+      - -notifier.url=http://alertmanager:9093
+      - -external.label=source=miniappify
+      - -external.url=${GRAFANA_ROOT_URL:-http://127.0.0.1:3000}
+      - -loggerFormat=json
+    volumes:
+      - ./vmalert/rules:/etc/vmalert/rules:ro
+      - ./secrets/vm_password:/run/secrets/vm_password:ro
+    depends_on: [victoriametrics, alertmanager]
+    mem_limit: 64m
+    memswap_limit: 64m
+    cpus: 0.25
+
+  alertmanager:
+    <<: *defaults
+    image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --data.retention=120h
+      # single instance: no gossip cluster port
+      - --cluster.listen-address=
+      - --web.external-url=http://127.0.0.1:9093
+    volumes:
+      - am-data:/alertmanager
+      - ./alertmanager:/etc/alertmanager:ro
+      - ./secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro
+      - ./secrets/telegram_chat_id:/run/secrets/telegram_chat_id:ro
+      - ./secrets/healthchecks_url:/run/secrets/healthchecks_url:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    mem_limit: 64m
+    memswap_limit: 64m
+    cpus: 0.25
+
+  grafana:
+    <<: *defaults
+    image: grafana/grafana:13.2.3@sha256:b28bae15e219c998fb0e0424ed724930cc61b1f61fb404d47c862f9a23f9e572
+    environment:
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://127.0.0.1:3000}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SECURE: ${GRAFANA_COOKIE_SECURE:-false}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      # alerting is done by vmalert + Alertmanager (single source of truth, as code)
+      GF_UNIFIED_ALERTING_ENABLED: "false"
+      GF_LOG_LEVEL: warn
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
+      - ./secrets/vm_password:/run/secrets/vm_password:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "10.66.66.1:3000:3000"     # access over WireGuard
+    depends_on: [victoriametrics]
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+
+  blackbox:
+    <<: *defaults
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    cap_add: [NET_RAW]            # ICMP probes
+    mem_limit: 32m
+    memswap_limit: 32m
+    cpus: 0.1
+
+  cadvisor:
+    <<: *defaults
+    image: ghcr.io/google/cadvisor:v0.60.6@sha256:b8e7d1093144fd088f425ff003d75a4aa405de075db78dae3bc563730b1bd07a
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --max_housekeeping_interval=60s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service
+      - --enable_metrics=cpu,memory,network,oom_event,diskIO
+      - --disable_root_cgroup_stats=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices: ["/dev/kmsg"]
+    privileged: true              # required by cAdvisor for cgroup + OOM events
+    mem_limit: 160m
+    memswap_limit: 160m
+    cpus: 0.3
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    restart: unless-stopped
+    logging: *logging
+    # host network so eth0/wg0 traffic is real host traffic; listens only on
+    # the monitoring bridge gateway, never on the public interface
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=172.30.0.1:9100
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|snap/.+)($|/)
+      - --collector.netclass.ignored-devices=^(veth.*|br-.*|docker0)$
+      - --collector.netdev.device-exclude=^(veth.*|lo)$
+      - --no-collector.hwmon
+      - --no-collector.thermal_zone
+      - --no-collector.nvme
+      - --no-collector.btrfs
+      - --no-collector.zfs
+      - --no-collector.infiniband
+      - --no-collector.fibrechannel
+      - --no-collector.tapestats
+      - --no-collector.watchdog
+    volumes:
+      - /:/host:ro,rslave
+    depends_on: [victoriametrics]   # ensures the monitoring bridge (172.30.0.1) exists
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 48m
+    memswap_limit: 48m
+    cpus: 0.2
+
+networks:
+  monitoring:
+    name: monitoring
+    driver_opts:
+      com.docker.network.bridge.name: br-monitoring
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
+
+volumes:
+  vm-data:
+  am-data:
+  grafana-data:
