@@ -35,3 +35,15 @@ backup_env_file: /etc/k3s-backup.env
 backup_schedule: "*-*-* 00/6:15:00"
 backup_local_dir: /var/backups/k3s
 backup_local_retention_days: 3
+
+# ---------------------------------------------------------------------------
+# WireGuard tunnel to the monitoring hub (roles/wireguard_client)
+# vmagent remote_writes to http://10.66.66.1:8428 through this tunnel.
+# ---------------------------------------------------------------------------
+wg_hub_interface: wg-hub
+wg_hub_name: miniappify
+wg_hub_address: 10.66.66.10/32         # must be unused on the hub's wg0
+wg_hub_endpoint: "103.140.249.167:51820"
+wg_hub_allowed_ips: ["10.66.66.1/32"]  # hub only, never a full tunnel
+wg_hub_mtu: 1380                       # conservative for the EU<->VN path
+wg_hub_public_key: ""                  # hub's PUBLIC key (wg show wg0 public-key); empty = only generate local keys

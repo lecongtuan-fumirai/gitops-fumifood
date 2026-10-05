@@ -1,0 +1,11 @@
+{{/* Compact Telegram message (HTML parse mode). */}}
+{{ define "telegram.message" -}}
+{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}🔴{{ else }}🟠{{ end }} <b>FIRING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }} · <b>{{ .CommonLabels.alertname }}</b>{{ if .CommonLabels.cluster }} · {{ .CommonLabels.cluster }}{{ end }}
+{{ range .Alerts -}}
+• {{ .Annotations.summary | html }}
+{{- if and (eq .Status "firing") .Annotations.description }}
+  <i>{{ .Annotations.description | html }}</i>
+{{- end }}
+  <code>{{ .StartsAt.Format "2006-01-02 15:04 MST" }}</code>
+{{ end -}}
+{{- end }}

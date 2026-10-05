@@ -1,0 +1,17 @@
+# Managed by Ansible (platform-gitops/ansible/roles/wireguard_client). Do not edit by hand.
+# Tunnel to the monitoring hub. vmagent pods reach {{ wg_hub_allowed_ips | join(', ') }} through it
+# (flannel masquerades pod traffic to this interface's address).
+[Interface]
+Address = {{ wg_hub_address }}
+MTU = {{ wg_hub_mtu }}
+# No ListenPort: k3s flannel (wireguard-native) already owns UDP 51820 here.
+# This side only initiates; PersistentKeepalive keeps the NAT/conntrack path open.
+# Private key is loaded from a separate 0600 file so it never appears in this config.
+PostUp = wg set %i private-key /etc/wireguard/%i.key
+
+[Peer]
+# {{ wg_hub_name }}
+PublicKey = {{ wg_hub_public_key }}
+Endpoint = {{ wg_hub_endpoint }}
+AllowedIPs = {{ wg_hub_allowed_ips | join(', ') }}
+PersistentKeepalive = 25

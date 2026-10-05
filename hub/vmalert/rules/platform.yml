@@ -1,0 +1,130 @@
+# Platform components on vn1-01 (Argo CD, cert-manager, Traefik), external
+# probes from VN (blackbox) and the hub's own health.
+groups:
+  - name: platform
+    interval: 60s
+    rules:
+      - alert: ArgoAppUnhealthy
+        expr: argocd_app_info{health_status=~"Degraded|Missing|Unknown"} == 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Argo CD app {{ $labels.name }} is {{ $labels.health_status }}"
+
+      - alert: ArgoAppOutOfSync
+        expr: argocd_app_info{sync_status="OutOfSync"} == 1
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Argo CD app {{ $labels.name }} OutOfSync for 30m (Git != cluster)"
+
+      - alert: CertificateNotReady
+        expr: certmanager_certificate_ready_status{condition="False"} == 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} not ready"
+          description: "kubectl -n {{ $labels.namespace }} describe certificate {{ $labels.name }}; check challenges/orders."
+
+      - alert: CertificateExpiringSoon
+        expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 14 * 86400
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Origin cert {{ $labels.namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+          description: "cert-manager renews at 30 days; reaching 14 days means renewal is failing."
+
+      - alert: CertificateExpiryCritical
+        expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 3 * 86400
+        labels: { severity: critical }
+        annotations:
+          summary: "Origin cert {{ $labels.namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: TraefikServiceHigh5xx
+        expr: |
+          sum by (service) (rate(traefik_service_requests_total{code=~"5.."}[5m]))
+          / sum by (service) (rate(traefik_service_requests_total[5m])) > 0.05
+          and sum by (service) (rate(traefik_service_requests_total[5m])) > 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Traefik service {{ $labels.service }}: {{ $value | humanizePercentage }} 5xx"
+
+  - name: blackbox
+    interval: 30s
+    rules:
+      - alert: EndpointDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} is DOWN as seen from Vietnam"
+          description: "Check Cloudflare status, then `kubectl get pods -A` on vn1-01."
+
+      - alert: EndpointSlow
+        expr: avg_over_time(probe_duration_seconds{job="blackbox-http"}[10m]) > 3
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} takes {{ $value | humanize }}s from Vietnam"
+
+      - alert: EndpointHTTPError
+        expr: probe_http_status_code{job="blackbox-http"} >= 400
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} returns HTTP {{ $value }}"
+
+      # Cloudflare edge certificate (what browsers see)
+      - alert: EdgeCertExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http"} - time()) < 14 * 86400
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Edge cert for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: HostUnreachable
+        expr: probe_success{job="blackbox-icmp"} == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.node }} ({{ $labels.instance }}) does not answer ping from Vietnam"
+
+  - name: hub
+    interval: 60s
+    rules:
+      # VictoriaMetrics goes read-only at 2GB free (-storage.minFreeDiskSpaceBytes)
+      - alert: HubTSDBDiskLow
+        expr: vm_free_disk_space_bytes < 3.5e9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "VictoriaMetrics: {{ $value | humanize1024 }}B free; writes stop at 2GiB"
+
+      - alert: HubTSDBDiskCritical
+        expr: vm_free_disk_space_bytes < 2.5e9
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "VictoriaMetrics: {{ $value | humanize1024 }}B free; ingestion is about to stop"
+
+      - alert: HubTSDBRowsRejected
+        expr: sum(increase(vm_rows_ignored_total[15m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "VictoriaMetrics rejected {{ $value | humanize }} rows in 15m"
+
+      - alert: HubContainerRestarting
+        expr: changes(container_start_time_seconds{cluster="hub", name!=""}[15m]) > 1
+        labels: { severity: warning }
+        annotations:
+          summary: "Container {{ $labels.name }} on miniappify restarted {{ $value | humanize }} times in 15m"
+
+      - alert: HubContainerNearMemoryLimit
+        expr: |
+          container_memory_working_set_bytes{cluster="hub", name!=""}
+          / (container_spec_memory_limit_bytes{cluster="hub", name!=""} > 0) > 0.90
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Container {{ $labels.name }} at {{ $value | humanizePercentage }} of its memory limit"

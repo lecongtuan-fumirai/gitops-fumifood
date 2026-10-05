@@ -7,4 +7,5 @@ resources:
   - platform/traefik.yaml
   - platform/argocd.yaml
   - platform/system-upgrade-controller.yaml
+  - platform/monitoring.yaml
   - apps-appset.yaml

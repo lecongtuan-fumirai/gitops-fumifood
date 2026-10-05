@@ -9,3 +9,5 @@
       tags: [k3s]
     - role: backup
       tags: [backup]
+    - role: wireguard_client
+      tags: [wireguard]

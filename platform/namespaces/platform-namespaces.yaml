@@ -20,3 +20,27 @@ metadata:
   labels:
     # upgrade jobs need host access to replace the k3s binary
     pod-security.kubernetes.io/enforce: privileged
+---
+# Monitoring agents only (node-exporter, kube-state-metrics, vmagent).
+# Storage, alerting and Grafana live on the external hub (miniappify) so
+# they survive an outage of this cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # node-exporter needs hostNetwork/hostPID/hostPath to read host metrics
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: monitoring
+spec:
+  hard:
+    # hard ceiling so monitoring can never starve production on a 3.8 GiB node
+    requests.memory: 384Mi
+    limits.memory: 640Mi
+    pods: "6"

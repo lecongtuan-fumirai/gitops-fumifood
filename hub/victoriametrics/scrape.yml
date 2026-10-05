@@ -1,0 +1,87 @@
+# Scrape config for VictoriaMetrics' built-in scraper on the hub.
+# vn1-01 is NOT scraped from here: its vmagent pushes over WireGuard.
+# Every hub series gets cluster="hub", node="miniappify" (vmagent on vn1-01
+# sets cluster="prod"), so alert rules and dashboards can tell them apart.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["172.30.0.1:9100"]
+        labels: { cluster: hub, node: miniappify }
+
+  - job_name: cadvisor
+    honor_timestamps: false
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels: { cluster: hub, node: miniappify }
+    metric_relabel_configs:
+      # cAdvisor per-container network/disk series for non-container cgroups
+      - source_labels: [name]
+        regex: ""
+        action: drop
+
+  - job_name: vmalert
+    static_configs:
+      - targets: ["vmalert:8880"]
+        labels: { cluster: hub, node: miniappify }
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: ["alertmanager:9093"]
+        labels: { cluster: hub, node: miniappify }
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels: { cluster: hub, node: miniappify }
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: grafana_(http_request_duration_seconds|api_.*|alerting_.*|.*_bucket)|go_.*
+        action: drop
+
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets: ["blackbox:9115"]
+        labels: { cluster: hub, node: miniappify }
+
+  # ---------------------------------------------------------------------
+  # External probes from Vietnam = what a real VN user experiences.
+  # NOTE: through Cloudflare, the TLS cert seen here is the Cloudflare edge
+  # cert. The origin (Let's Encrypt) cert is watched via cert-manager metrics.
+  # ---------------------------------------------------------------------
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params: { module: [http_2xx] }
+    static_configs:
+      - targets:
+          - https://fumifood.dpdns.org/health
+          - https://chungkhoanai.dpdns.org/_floci/health
+        labels: { cluster: prod, probe_from: vn }
+      # Services on this hub. Fill in the real public URL(s), then reload:
+      #   curl -u vmagent:$(cat secrets/vm_password) -X POST http://127.0.0.1:8428/-/reload
+      # - targets: ["https://n8n.example.com/healthz"]
+      #   labels: { cluster: hub, probe_from: vn }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: blackbox-icmp
+    metrics_path: /probe
+    params: { module: [icmp] }
+    static_configs:
+      - targets: ["13.140.183.90"]
+        labels: { cluster: prod, node: vn1-01, probe_from: vn }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

@@ -1,0 +1,15 @@
+# Only pods inside "monitoring" may talk to kube-state-metrics / vmagent.
+# kube-state-metrics exposes every pod/namespace name in the cluster, so app
+# namespaces must not be able to read it.
+# (node-exporter uses hostNetwork; NetworkPolicy does not apply to it, public
+# access to node:9100 is blocked by UFW.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: baseline
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
