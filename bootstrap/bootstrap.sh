@@ -9,6 +9,15 @@
 # Idempotent: safe to re-run.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+
+if [ -z "${KUBECONFIG:-}" ]; then
+  if [ -f "$HOME/.kube/config" ]; then
+    export KUBECONFIG="$HOME/.kube/config"
+  elif [ -f /etc/rancher/k3s/k3s.yaml ]; then
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  fi
+fi
+
 SOPS_AGE_KEY_FILE=${SOPS_AGE_KEY_FILE:-/root/.config/sops/age/keys.txt}
 DEPLOY_KEY=${DEPLOY_KEY:-/root/.ssh/argocd_platform_gitops}
 REPO_URL=git@github.com:lecongtuan-fumirai/gitops-fumifood.git

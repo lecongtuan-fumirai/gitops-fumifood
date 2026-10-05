@@ -41,24 +41,23 @@ log:
 ports:
   web:
     port: 8000
-    exposedPort: 8080                     # TRANSITION; cutover => 80
+    exposedPort: 80                       # Phase 5 cutover: 80
     forwardedHeaders:
-      # host nginx (127.0.0.1 / node IP / cni0) forwards X-Forwarded-Proto=https
       trustedIPs: ["127.0.0.1/32", "10.42.0.0/16", "13.140.183.90/32"]
     transport:
       respondingTimeouts:
         readTimeout: 0                    # large uploads / websockets
         writeTimeout: 0
         idleTimeout: 600s
-    # http:                               # CUTOVER: enable
-    #   redirections:
-    #     entryPoint:
-    #       to: websecure
-    #       scheme: https
-    #       permanent: true
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
     port: 8443
-    exposedPort: 8443                     # TRANSITION; cutover => 443
+    exposedPort: 443                      # Phase 5 cutover: 443
     http:
       tls:
         enabled: true
