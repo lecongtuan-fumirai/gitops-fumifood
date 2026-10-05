@@ -28,24 +28,6 @@ spec:
         runAsGroup: 1001
         fsGroup: 1001
         seccompProfile: { type: RuntimeDefault }
-      initContainers:
-        - name: prisma-migrate
-          image: fumirai-lunch-backend
-          command: ["node_modules/.bin/prisma", "migrate", "deploy"]
-          workingDir: /app/BE
-          env:
-            - { name: HOME, value: /tmp }
-          envFrom:
-            - secretRef: { name: fumirai-lunch-env }
-          resources:
-            requests: { cpu: 50m, memory: 96Mi }
-            limits: { memory: 384Mi }
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities: { drop: [ALL] }
-          volumeMounts:
-            - { name: tmp, mountPath: /tmp }
       containers:
         - name: backend
           image: fumirai-lunch-backend            # set by overlay (tag + digest)
