@@ -49,10 +49,12 @@ spec:
             - { name: cache, mountPath: /var/cache/nginx }
             - { name: run, mountPath: /var/run }
             - { name: tmp, mountPath: /tmp }
+            - { name: fe-env, mountPath: /usr/share/nginx/html/env.js, subPath: env.js, readOnly: true }
       volumes:
         - { name: cache, emptyDir: { sizeLimit: 64Mi } }
         - { name: run, emptyDir: { medium: Memory, sizeLimit: 1Mi } }
         - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
+        - { name: fe-env, configMap: { name: fumirai-lunch-frontend-env } }
 ---
 apiVersion: v1
 kind: Service

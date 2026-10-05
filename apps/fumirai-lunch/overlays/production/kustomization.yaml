@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: fumirai-lunch-prod
 resources:
   - ../../base
+  - frontend-env.yaml
 generators:
   - secret-generator.yaml
 images:
