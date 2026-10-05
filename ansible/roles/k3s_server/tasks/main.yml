@@ -5,6 +5,12 @@
     state: directory
     mode: "0755"
 
+- name: K3s server logs directory
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/server/logs
+    state: directory
+    mode: "0700"
+
 - name: API server audit policy (metadata level, skip noisy read-only traffic)
   ansible.builtin.copy:
     dest: /etc/rancher/k3s/audit-policy.yaml
@@ -77,6 +83,7 @@
   delay: 10
   until: node_ready.rc == 0
   changed_when: false
+  check_mode: false
 
 - name: Root kubeconfig
   ansible.builtin.file:
