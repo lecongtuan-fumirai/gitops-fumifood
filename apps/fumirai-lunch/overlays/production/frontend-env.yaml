@@ -6,7 +6,7 @@ metadata:
 data:
   env.js: |
     window.__ENV__ = {
-      ORDER_CUTOFF_TIME: "17:30",
+      ORDER_CUTOFF_TIME: "09:00",
       VITE_API_URL: "",
       VITE_DEV_MODE: "false",
       VITE_GOOGLE_CALLBACK_URL: "https://fumifood.dpdns.org/api/auth/google/callback",
