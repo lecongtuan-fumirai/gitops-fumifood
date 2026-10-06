@@ -40,7 +40,7 @@ spec:
           envFrom:
             - secretRef: { name: fumirai-lunch-env }
           resources:
-            requests: { cpu: 50m, memory: 128Mi }
+            requests: { cpu: 150m, memory: 256Mi }
             limits: { memory: 512Mi }
           startupProbe:                           # tolerate Neon cold start
             httpGet: { path: /health, port: http }
