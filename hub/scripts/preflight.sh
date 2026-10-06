@@ -26,7 +26,7 @@ if grep -q '^SaveConfig *= *true' /etc/wireguard/wg0.conf 2>/dev/null; then warn
 if systemctl cat docker 2>/dev/null | grep -q 'wg-quick@wg0'; then ok "docker starts after wg-quick@wg0"; else warn "docker has no After=wg-quick@wg0 drop-in (VM bind to 10.66.66.1 can fail at boot)"; fi
 
 echo "== Ports"
-for p in 10.66.66.1:8428 127.0.0.1:8428 127.0.0.1:3000 10.66.66.1:3000 127.0.0.1:9093 172.30.0.1:9100; do
+for p in 10.66.66.1:8428 127.0.0.1:8428 127.0.0.1:3000 10.66.66.1:3000 127.0.0.1:9093 172.28.0.1:9100; do
   if ss -ltnH "( sport = :${p##*:} )" | awk '{print $4}' | grep -qE "^(\*|0\.0\.0\.0|\[::\]|${p%:*}):${p##*:}$"; then
     docker ps --format '{{.Names}}' | grep -q '^monitoring-' && ok "$p in use (by this stack)" || bad "$p already in use by something else"
   else ok "$p free"; fi
@@ -35,9 +35,9 @@ done
 echo "== Firewall"
 if command -v ufw >/dev/null && ufw status | grep -q 'Status: active'; then
   ok "ufw active"
-  ufw status | grep -q '172.30.0.0/24' && ok "ufw allows monitoring bridge -> node-exporter" || warn "add: ufw allow in on br-monitoring from 172.30.0.0/24 to 172.30.0.1 port 9100 proto tcp"
+  ufw status | grep -q '172.28.0.0/24' && ok "ufw allows monitoring bridge -> node-exporter" || warn "add: ufw allow in on br-monitoring from 172.28.0.0/24 to 172.28.0.1 port 9100 proto tcp"
 else
-  warn "ufw inactive: published ports are still private (bound to 127.0.0.1 / 10.66.66.1 / 172.30.0.1)"
+  warn "ufw inactive: published ports are still private (bound to 127.0.0.1 / 10.66.66.1 / 172.28.0.1)"
 fi
 
 echo "== Secrets"

@@ -129,8 +129,8 @@ services:
       - "127.0.0.1:3000:3000"
       - "10.66.66.1:3000:3000"     # access over WireGuard
     depends_on: [victoriametrics]
-    mem_limit: 256m
-    memswap_limit: 256m
+    mem_limit: 384m
+    memswap_limit: 384m
     cpus: 0.5
 
   blackbox:
@@ -177,7 +177,7 @@ services:
     pid: host
     command:
       - --path.rootfs=/host
-      - --web.listen-address=172.30.0.1:9100
+      - --web.listen-address=172.28.0.1:9100
       - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|snap/.+)($|/)
       - --collector.netclass.ignored-devices=^(veth.*|br-.*|docker0)$
       - --collector.netdev.device-exclude=^(veth.*|lo)$
@@ -192,7 +192,7 @@ services:
       - --no-collector.watchdog
     volumes:
       - /:/host:ro,rslave
-    depends_on: [victoriametrics]   # ensures the monitoring bridge (172.30.0.1) exists
+    depends_on: [victoriametrics]   # ensures the monitoring bridge (172.28.0.1) exists
     security_opt: ["no-new-privileges:true"]
     mem_limit: 48m
     memswap_limit: 48m
@@ -205,8 +205,8 @@ networks:
       com.docker.network.bridge.name: br-monitoring
     ipam:
       config:
-        - subnet: 172.30.0.0/24
-          gateway: 172.30.0.1
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
 
 volumes:
   vm-data:

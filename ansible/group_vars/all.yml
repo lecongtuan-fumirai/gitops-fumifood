@@ -46,4 +46,4 @@ wg_hub_address: 10.66.66.10/32         # must be unused on the hub's wg0
 wg_hub_endpoint: "103.140.249.167:51820"
 wg_hub_allowed_ips: ["10.66.66.1/32"]  # hub only, never a full tunnel
 wg_hub_mtu: 1380                       # conservative for the EU<->VN path
-wg_hub_public_key: ""                  # hub's PUBLIC key (wg show wg0 public-key); empty = only generate local keys
+wg_hub_public_key: "IttcBqSmrV35jr/EuUZAGaZ1GSz18TTpJNHRs90Vdi4="  # miniappify wg0 public key
