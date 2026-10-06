@@ -9,7 +9,9 @@ metadata:
   name: floci
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.middlewares: traefik-security-headers@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      traefik-security-headers@kubernetescrd,
+      traefik-rate-limit@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -47,7 +49,9 @@ metadata:
   name: floci-ui-redirect
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: >-
-      traefik-security-headers@kubernetescrd,floci-prod-ui-redirect@kubernetescrd
+      traefik-security-headers@kubernetescrd,
+      floci-prod-ui-redirect@kubernetescrd,
+      traefik-rate-limit@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
