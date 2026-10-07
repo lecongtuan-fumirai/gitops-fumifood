@@ -31,6 +31,8 @@ spec:
           image: fumirai-lunch-frontend           # set by overlay (tag + digest)
           ports:
             - { name: http, containerPort: 80 }
+          env:
+            - { name: NODE_ENV, value: "production" }
           resources:
             requests: { cpu: 10m, memory: 16Mi }
             limits: { memory: 64Mi }
