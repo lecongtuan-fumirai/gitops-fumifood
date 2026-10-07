@@ -39,6 +39,8 @@ spec:
             - { name: NODE_OPTIONS, value: "--max-old-space-size=384" }
             - { name: DEV_MODE, value: "false" }
             - { name: TOTAL_EMPLOYEES, value: "100" }
+            - { name: JWT_ACCESS_EXPIRES_IN, value: "15m" }
+            - { name: JWT_REFRESH_EXPIRES_IN, value: "30d" }
           envFrom:
             - secretRef: { name: fumirai-lunch-env }
           resources:
