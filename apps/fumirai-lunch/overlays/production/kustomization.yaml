@@ -11,11 +11,11 @@ images:
   - name: fumirai-lunch-backend
     newName: docker.io/lecongtuan/fumirai-lunch-backend
     newTag: latest
-    digest: sha256:af32acb2b1eff11cf20fb1ff61101f0b6e0ffd790ba8796254f725639ce06bbf
+    digest: sha256:edebd4b214eddec9177d6efc2b2f20a439cc9afe3fba4cb096ff5503ce6a71c8
   - name: fumirai-lunch-frontend
     newName: docker.io/lecongtuan/fumirai-lunch-frontend
     newTag: latest
-    digest: sha256:d7d1ec1188c95718bc34991c3308c9c959d074a7075d662b26f32ff5db2ab1bd
+    digest: sha256:8903d08a0788f1b2a9ed80ac10c9962ec04d00a92838f372506c9faa0d645334
 patches:
   - target: {kind: Ingress, name: fumirai-lunch}
     patch: |-
