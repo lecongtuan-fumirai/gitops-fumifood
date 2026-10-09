@@ -47,6 +47,13 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: traefik
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: fumirai-lunch-prod
+automountServiceAccountToken: false
+---
 # ---------------------------------------------------------------------------
 # fumirai-lunch-staging
 # ---------------------------------------------------------------------------
@@ -95,3 +102,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: traefik
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: fumirai-lunch-staging
+automountServiceAccountToken: false
