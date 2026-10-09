@@ -11,7 +11,7 @@ images:
   - name: fumirai-lunch-backend
     newName: docker.io/lecongtuan/fumirai-lunch-backend
     newTag: latest
-    digest: sha256:3909593290b97be18eafd3c9df54be0d1990e494abb5c5d39086a0f0ea78a403
+    digest: sha256:fde2d9ecd3c758df152d73edf9b2da6359746bb14db75c97c6ebe9167902bf85
   - name: fumirai-lunch-frontend
     newName: docker.io/lecongtuan/fumirai-lunch-frontend
     newTag: latest
