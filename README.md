@@ -38,6 +38,7 @@ sops apps/fumirai-lunch/overlays/production/secrets.enc.yaml
 ```
 
 ## Documentation & Runbooks
+- [docs/k3s-cluster-architecture.md](docs/k3s-cluster-architecture.md): **Core K3s Cluster Architecture & System Design**
 - [docs/security-hardening-and-ddos-runbook.md](docs/security-hardening-and-ddos-runbook.md): **Security Hardening, Anti-DDoS Architecture & Incident Runbook**
 - [docs/monitoring-hub-architecture-and-runbook.md](docs/monitoring-hub-architecture-and-runbook.md): Cross-Region Monitoring Hub Architecture & Operations
 - [docs/runbook-cutover.md](docs/runbook-cutover.md): Zero-downtime migration and ingress cutover
