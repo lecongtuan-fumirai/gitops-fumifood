@@ -37,6 +37,92 @@ sops apps/fumirai-lunch/overlays/production/secrets.enc.yaml
 ./scripts/validate.sh
 ```
 
+## Troubleshooting & Debugging
+
+### 1. Workload & Pod Issues (CrashLoopBackOff, Pending, Restarts)
+```bash
+# List all pods with status and node placement
+kubectl get pods -A -o wide
+
+# Filter pods that are not Running or Completed
+kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
+
+# Inspect pod events, exit codes, and failure reasons (OOMKilled, probe failures)
+kubectl describe pod <pod-name> -n <namespace>
+
+# Stream live container logs
+kubectl logs -f <pod-name> -n <namespace> [-c <container-name>]
+
+# Check logs of previous crashed container instance
+kubectl logs --previous <pod-name> -n <namespace>
+
+# Restart a deployment (e.g. reload Secret or ConfigMap updates)
+kubectl rollout restart deployment/<deploy-name> -n <namespace>
+kubectl rollout status deployment/<deploy-name> -n <namespace>
+
+# Shell into a running container
+kubectl exec -it <pod-name> -n <namespace> -- /bin/sh
+```
+
+### 2. Node & Cluster Health (OOM, High Resource Usage)
+```bash
+# Check node status and conditions
+kubectl get nodes -o wide
+kubectl describe node vn1-01
+
+# Inspect CPU & Memory usage across cluster
+kubectl top nodes
+kubectl top pods -A --sort-by=memory
+kubectl top pods -A --sort-by=cpu
+
+# Cluster-wide events sorted chronologically (warnings, scheduling, evictions)
+kubectl get events -A --sort-by='.metadata.creationTimestamp'
+
+# K3s system service logs on the host server
+journalctl -u k3s -f --no-tail
+```
+
+### 3. Ingress, Networking & TLS Certificates
+```bash
+# Check Services and target Endpoints
+kubectl get svc,ep -n <namespace>
+
+# Inspect Ingress definitions and hosts
+kubectl get ingress -A
+kubectl describe ingress <ingress-name> -n <namespace>
+
+# Traefik ingress controller logs (traffic routing, SSL handshakes)
+kubectl logs -n traefik -l app.kubernetes.io/name=traefik -f --tail=100
+
+# Check cert-manager SSL certificates, orders, and challenges
+kubectl get certificate,certificaterequest,order,challenge -A
+kubectl describe certificate <cert-name> -n <namespace>
+```
+
+### 4. Argo CD & GitOps Sync Failures
+```bash
+# View all applications sync and health status
+kubectl get applications -n argocd
+
+# Inspect sync error or diff details
+kubectl describe application <app-name> -n argocd
+
+# Argo CD repo-server logs (KSOPS decrypt, kustomize render issues)
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-repo-server -f --tail=100
+
+# Trigger a manual sync on an application
+kubectl patch application <app-name> -n argocd --type merge -p '{"operation":{"sync":{"prune":true}}}'
+```
+
+### 5. Secrets & KSOPS Decryption Verification
+```bash
+# Verify decrypted secret contents inside cluster
+kubectl get secret <secret-name> -n <namespace> -o jsonpath='{.data.<KEY>}' | base64 -d; echo
+
+# Local SOPS decrypt check
+SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt sops -d apps/<app>/overlays/<env>/secrets.enc.yaml
+```
+
 ## Documentation & Runbooks
 - [docs/k3s-cluster-architecture.md](docs/k3s-cluster-architecture.md): **Core K3s Cluster Architecture & System Design**
 - [docs/security-hardening-and-ddos-runbook.md](docs/security-hardening-and-ddos-runbook.md): **Security Hardening, Anti-DDoS Architecture & Incident Runbook**
