@@ -4,4 +4,4 @@ resources:
   - priority-classes.yaml
   - platform-namespaces.yaml
   - fumirai-lunch.yaml
-  - floci.yaml
+

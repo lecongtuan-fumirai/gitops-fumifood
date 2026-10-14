@@ -83,7 +83,6 @@ Tài liệu này cung cấp cái nhìn toàn cảnh, chi tiết và có hệ th�
 │ │ ├─ Frontend   │       │ Cert-Manager      │       │ node-exporter  │ │
 │ │ └─ Backend    │       │ System-Upgrade    │       │ kube-state-m.  │ │
 │ │               │       │ Local-Path Storage│       │ metrics-server │ │
-│ │ floci (AWS em)│       │                   │       │                │ │
 │ └───────────────┘       └───────────────────┘       └───────┬────────┘ │
 │                                                             │          │
 │                                                             ▼          │

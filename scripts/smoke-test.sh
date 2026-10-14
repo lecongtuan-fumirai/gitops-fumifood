@@ -23,10 +23,5 @@ echo "fumirai-lunch"
 req fumifood.dpdns.org /health 200
 req fumifood.dpdns.org / 200
 req fumifood.dpdns.org "/socket.io/?EIO=4&transport=polling" 200
-echo "floci"
-req chungkhoanai.dpdns.org /_floci/health 200
-req chungkhoanai.dpdns.org /_floci/ui 302
-req chungkhoanai.dpdns.org /api/clouds 200
-req chungkhoanai.dpdns.org /console/aws 200
 
 [ "$FAIL" -eq 0 ] && echo "SMOKE OK" || { echo "SMOKE FAILED"; exit 1; }
