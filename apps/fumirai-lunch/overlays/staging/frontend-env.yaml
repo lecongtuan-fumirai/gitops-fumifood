@@ -9,6 +9,7 @@ data:
       ORDER_CUTOFF_TIME: "10:30",
       VITE_API_URL: "",
       VITE_DEV_MODE: "true",
+      VITE_ENABLE_SW_IN_DEV: "true",
       VITE_GOOGLE_CALLBACK_URL: "https://staging-fumifood.dpdns.org/api/auth/google/callback",
       VITE_GOOGLE_CLIENT_ID: "141718488174-2dgil889c1l1v3k4fig1d2p2jt2qq5id.apps.googleusercontent.com"
     };
