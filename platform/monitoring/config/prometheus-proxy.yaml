@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-proxy-config
+  labels:
+    app.kubernetes.io/name: prometheus-proxy
+data:
+  nginx.conf.tmpl: |
+    worker_processes 1;
+    pid /tmp/nginx/nginx.pid;
+    events {
+        worker_connections 256;
+    }
+    http {
+        access_log /dev/stdout;
+        error_log /dev/stderr warn;
+        client_body_temp_path /tmp/nginx/client_body;
+        proxy_temp_path /tmp/nginx/proxy;
+        fastcgi_temp_path /tmp/nginx/fastcgi;
+        uwsgi_temp_path /tmp/nginx/uwsgi;
+        scgi_temp_path /tmp/nginx/scgi;
+
+        server {
+            listen 8428;
+            server_name _;
+
+            location = /healthz {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            location / {
+                proxy_pass http://10.66.66.1:8428;
+                proxy_http_version 1.1;
+                proxy_set_header Connection "";
+                proxy_set_header Host 10.66.66.1;
+                proxy_set_header Authorization "Basic __BASIC_AUTH__";
+                proxy_connect_timeout 5s;
+                proxy_read_timeout 30s;
+                proxy_send_timeout 30s;
+                proxy_buffering off;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-proxy
+  labels:
+    app.kubernetes.io/name: prometheus-proxy
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus-proxy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus-proxy
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 15
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: proxy
+          image: docker.io/nginxinc/nginx-unprivileged:alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              mkdir -p /tmp/nginx/client_body /tmp/nginx/proxy /tmp/nginx/fastcgi /tmp/nginx/uwsgi /tmp/nginx/scgi
+              AUTH=$(printf "%s:%s" "$VM_USER" "$VM_PASS" | base64 | tr -d '\n')
+              sed "s|__BASIC_AUTH__|$AUTH|g" /etc/nginx/templates/nginx.conf.tmpl > /tmp/nginx/nginx.conf
+              exec nginx -c /tmp/nginx/nginx.conf -g 'daemon off;'
+          env:
+            - name: VM_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vmagent-remote-write
+                  key: username
+            - name: VM_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: vmagent-remote-write
+                  key: password
+          ports:
+            - name: http
+              containerPort: 8428
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: config-template
+              mountPath: /etc/nginx/templates
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config-template
+          configMap:
+            name: prometheus-proxy-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-server
+  labels:
+    app.kubernetes.io/name: prometheus-proxy
+spec:
+  selector:
+    app.kubernetes.io/name: prometheus-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: http-prom
+      port: 9090
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-proxy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus-proxy
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8428
+          protocol: TCP

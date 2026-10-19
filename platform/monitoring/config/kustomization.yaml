@@ -3,5 +3,6 @@ kind: Kustomization
 namespace: monitoring
 resources:
   - networkpolicy.yaml
+  - prometheus-proxy.yaml
 generators:
   - secret-generator.yaml
