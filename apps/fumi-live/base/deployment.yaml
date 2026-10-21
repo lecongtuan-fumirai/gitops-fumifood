@@ -1,0 +1,113 @@
+# NestJS + WebSocket + Prisma gateway for real-time audio STT and translation.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fumi-live-gateway
+  labels:
+    app.kubernetes.io/name: fumi-live-gateway
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  # Surge a new pod first; the old one drains (WS close 1001, extension reconnects).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fumi-live-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fumi-live-gateway
+        app.kubernetes.io/component: gateway
+        fumi-live.io/db-access: "true"
+        fumi-live.io/internet-egress: "true"
+    spec:
+      priorityClassName: workload-standard
+      serviceAccountName: fumi-live-gateway
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # preStop 5s + up to 25s for the app to close WebSockets (1001) and flush streams.
+      terminationGracePeriodSeconds: 30
+      # Private GHCR. A missing Secret only logs a warning (anonymous pull is attempted).
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000      # `node` user of the node:22-slim image (numeric => verifiable)
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: fumi-live-gateway   # set by overlay (tag + digest)
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: fumi-live-config
+            - secretRef:
+                name: fumi-live-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop: ["ALL"]
+          # No CPU limit on purpose: CFS throttling adds jitter to realtime audio.
+          # The request guarantees the share; idle CPU on the node is usable in bursts.
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+              ephemeral-storage: 256Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            # Give Traefik time to drop the endpoint before the app closes sockets.
+            preStop:
+              sleep:
+                seconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: db-ca
+              mountPath: /etc/fumi/db-ca
+              readOnly: true
+      volumes:
+        # Disk-backed (tmpfs would count against the 512Mi memory limit).
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi
+        # CA bundle of the managed Postgres for sslmode=verify-full (optional).
+        - name: db-ca
+          configMap:
+            name: fumi-live-db-ca
+            optional: true

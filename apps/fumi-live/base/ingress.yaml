@@ -1,0 +1,36 @@
+# Only the routes the extension actually uses are exposed; everything else 404s at Traefik.
+# Every middleware listed here MUST exist in platform/traefik/config, otherwise Traefik
+# drops the whole router (all paths 404).
+# No per-IP in-flight limit for WebSockets on purpose: a whole office behind one NAT IP
+# joins the same meeting. Concurrency is capped by the app (MAX_SESSIONS,
+# MAX_CLIENTS_PER_MEETING); rate-limit still throttles connection/reconnect storms.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fumi-live
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      traefik-security-headers@kubernetescrd,
+      traefik-rate-limit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [HOST_PLACEHOLDER]
+      secretName: fumi-live-tls
+  rules:
+    - host: HOST_PLACEHOLDER
+      http:
+        paths:
+          - path: /ws
+            pathType: Prefix
+            backend: { service: { name: fumi-live-gateway, port: { name: http } } }
+          - path: /healthz
+            pathType: Prefix
+            backend: { service: { name: fumi-live-gateway, port: { name: http } } }
+          - path: /projects
+            pathType: Prefix
+            backend: { service: { name: fumi-live-gateway, port: { name: http } } }
+          - path: /auth
+            pathType: Prefix
+            backend: { service: { name: fumi-live-gateway, port: { name: http } } }

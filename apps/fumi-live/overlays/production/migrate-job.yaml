@@ -1,0 +1,94 @@
+# Database migration (`prisma migrate deploy`) with the dedicated `fumi-live-migrator`
+# image and DDL credentials, BEFORE the gateway rolls out.
+#
+# Ordering inside the Argo CD Sync phase (sync-waves):
+#   -2  Secrets (secrets.enc.yaml)          -> the Job always sees the CURRENT credentials
+#   -1  this Job (Sync hook)                -> must succeed, otherwise the sync stops here
+#    0  ConfigMap / Deployment / Service / Ingress
+# A PreSync hook would run BEFORE the Secrets exist (first sync) or with the OLD
+# credentials (rotation), so it is deliberately not used.
+#
+# DATABASE_URL=skip (PERSIST_TRANSCRIPTS=false) => exits 0 without touching anything.
+# A missing Secret is a hard failure (no `optional`): never skip a migration silently.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fumi-live-migrate
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+  labels:
+    app.kubernetes.io/name: fumi-live-migrate
+    app.kubernetes.io/component: migrator
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  # A failed Job is kept 24h for `kubectl logs` (successful ones are deleted by Argo).
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fumi-live-migrate
+        app.kubernetes.io/component: migrator
+        fumi-live.io/db-access: "true"
+    spec:
+      priorityClassName: workload-prod
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: fumi-live-migrator
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              if [ -z "${DATABASE_URL:-}" ]; then
+                echo "FATAL: DATABASE_URL is empty (use the literal value 'skip' to disable)." >&2
+                exit 1
+              fi
+              if [ "${DATABASE_URL}" = "skip" ]; then
+                echo "DATABASE_URL=skip; persistence disabled, nothing to migrate."
+                exit 0
+              fi
+              exec /app/node_modules/.bin/prisma migrate deploy
+          envFrom:
+            - secretRef:
+                name: fumi-live-migrator
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+              ephemeral-storage: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: db-ca
+              mountPath: /etc/fumi/db-ca
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: db-ca
+          configMap:
+            name: fumi-live-db-ca
+            optional: true

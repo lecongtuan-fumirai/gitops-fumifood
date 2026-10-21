@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: fumi-live
+      app.kubernetes.io/managed-by: argocd
+    includeSelectors: false
+
+# Namespace, quota and NetworkPolicies are owned by platform/namespaces/fumi-live.yaml
+# (AppProject "apps" forbids them). Pod labels fumi-live.io/* select those policies.
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# Non-secret configuration. Name gets a content hash => a config change rolls the pods.
+configMapGenerator:
+  - name: fumi-live-config
+    envs:
+      - app.env
