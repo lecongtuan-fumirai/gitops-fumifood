@@ -7,8 +7,18 @@ resources:
 configMapGenerator:
   - name: fumi-live-config
     behavior: merge
-    envs:
-      - app.env
+    literals:
+      - STT_PROVIDER=deepgram
+      - TRANSLATE_PROVIDERS=groq,claude
+      - TRANSLATE_FIRST_TOKEN_TIMEOUT_MS=3000
+      - MAX_SESSIONS=20
+      - MAX_CLIENTS_PER_MEETING=50
+      - GROQ_MODEL=qwen/qwen3.8-27b
+      - CLAUDE_MODEL=claude-haiku-4-5-20251001
+      - PERSIST_TRANSCRIPTS=false
+      - GOOGLE_AUTH_ENABLED=false
+      - GOOGLE_CLIENT_ID=
+      - GOOGLE_ALLOWED_DOMAIN=fumirai.ltd
 generators:
   - secret-generator.yaml
 images:

@@ -9,3 +9,4 @@ age.key
 # Monitoring hub (miniappify): plaintext secret files live only on that host
 hub/secrets/*
 !hub/secrets/.gitkeep
+*.env

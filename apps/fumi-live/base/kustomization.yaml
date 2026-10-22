@@ -18,5 +18,8 @@ resources:
 # Non-secret configuration. Name gets a content hash => a config change rolls the pods.
 configMapGenerator:
   - name: fumi-live-config
-    envs:
-      - app.env
+    literals:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=320
