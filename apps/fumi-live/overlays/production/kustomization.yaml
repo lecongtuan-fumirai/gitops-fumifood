@@ -19,8 +19,8 @@ configMapGenerator:
       - GOOGLE_AUTH_ENABLED=false
       - GOOGLE_CLIENT_ID=
       - GOOGLE_ALLOWED_DOMAIN=fumirai.ltd
-generators:
-  - secret-generator.yaml
+# generators:
+#   - secret-generator.yaml
 images:
   # Promotion = updated automatically by .github/workflows/release.yml or via reviewed PR.
   # Always tag + digest of the SAME build.
