@@ -17,8 +17,8 @@ images:
   # the migrate Job (sync-wave -1) blocks the whole sync.
   - name: fumi-live-gateway
     newName: ghcr.io/fumirai-ltd/fumi-live-gateway
-    newTag: sha-70b21f1
-    digest: sha256:77eed1b429578670cca96ad60884920a3fd0547ecb53c1c4e8091dd12b185ce3
+    newTag: sha-02f3950
+    digest: sha256:5beaae1fbff2d2929f75b53db14c4565fd8aac2d92f05b178752f00ccefacd57
   - name: fumi-live-migrator
     newName: ghcr.io/fumirai-ltd/fumi-live-migrator
     newTag: v0.1.0
