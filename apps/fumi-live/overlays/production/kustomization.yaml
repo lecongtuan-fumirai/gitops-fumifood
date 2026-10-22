@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: fumi-live-prod
 resources:
   - ../../base
-  - migrate-job.yaml
+  # - migrate-job.yaml
 configMapGenerator:
   - name: fumi-live-config
     behavior: merge
@@ -13,21 +13,20 @@ generators:
   - secret-generator.yaml
 images:
   # Promotion = updated automatically by .github/workflows/release.yml or via reviewed PR.
-  # Always tag + digest of the SAME build. A placeholder digest = ImagePullBackOff and
-  # the migrate Job (sync-wave -1) blocks the whole sync.
+  # Always tag + digest of the SAME build.
   - name: fumi-live-gateway
     newName: ghcr.io/fumirai-ltd/fumi-live-gateway
     newTag: sha-02f3950
     digest: sha256:5beaae1fbff2d2929f75b53db14c4565fd8aac2d92f05b178752f00ccefacd57
-  - name: fumi-live-migrator
-    newName: ghcr.io/fumirai-ltd/fumi-live-migrator
-    newTag: v0.1.0
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # - name: fumi-live-migrator
+  #   newName: ghcr.io/fumirai-ltd/fumi-live-migrator
+  #   newTag: v0.1.0
+  #   digest: sha256:...
 patches:
   - target: {kind: Ingress, name: fumi-live}
     patch: |-
-      - { op: replace, path: /spec/rules/0/host, value: fumilive.dpdns.org }
-      - { op: replace, path: /spec/tls/0/hosts/0, value: fumilive.dpdns.org }
+      - { op: replace, path: /spec/rules/0/host, value: fumifood.dpdns.org }
+      - { op: replace, path: /spec/tls/0/hosts/0, value: fumifood.dpdns.org }
   - target: {kind: Deployment, name: fumi-live-gateway}
     patch: |-
       - { op: replace, path: /spec/template/spec/priorityClassName, value: workload-prod }
