@@ -44,3 +44,25 @@ spec:
     requests.memory: 384Mi
     limits.memory: 640Mi
     pods: "6"
+---
+# Logging stack (VictoriaLogs + Fluent Bit).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: logging
+spec:
+  hard:
+    requests.cpu: 100m
+    requests.memory: 128Mi
+    limits.memory: 384Mi
+    pods: "6"
+

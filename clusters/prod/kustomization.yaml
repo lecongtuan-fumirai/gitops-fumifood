@@ -8,4 +8,5 @@ resources:
   - platform/argocd.yaml
   - platform/system-upgrade-controller.yaml
   - platform/monitoring.yaml
+  - platform/logging.yaml
   - apps-appset.yaml
