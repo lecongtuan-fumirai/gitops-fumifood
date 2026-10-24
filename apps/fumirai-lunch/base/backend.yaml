@@ -71,9 +71,21 @@ spec:
         - name: tmp
           emptyDir: { sizeLimit: 256Mi }          # multer uploads (menu images, bank statements)
         - name: backend-logs
-          hostPath:
-            path: /home/platform-gitops/logs/backend
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: backend-logs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-logs
+  labels: { app.kubernetes.io/name: backend }
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
 ---
 apiVersion: v1
 kind: Service
