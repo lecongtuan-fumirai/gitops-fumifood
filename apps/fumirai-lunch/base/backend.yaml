@@ -66,9 +66,14 @@ spec:
             capabilities: { drop: [ALL] }
           volumeMounts:
             - { name: tmp, mountPath: /tmp }
+            - { name: backend-logs, mountPath: /app/BE/logs }
       volumes:
         - name: tmp
           emptyDir: { sizeLimit: 256Mi }          # multer uploads (menu images, bank statements)
+        - name: backend-logs
+          hostPath:
+            path: /home/platform-gitops/logs/backend
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

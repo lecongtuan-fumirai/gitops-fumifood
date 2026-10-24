@@ -10,3 +10,5 @@ age.key
 hub/secrets/*
 !hub/secrets/.gitkeep
 *.env
+logs/
+*.log
