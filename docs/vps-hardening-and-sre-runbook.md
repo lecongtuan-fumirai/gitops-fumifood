@@ -411,15 +411,36 @@ systemctl list-timers | grep k3s-backup
 
 ## 5.1. Kiến Trúc Giám Sát Tập Trung Qua WireGuard Tunnel
 
-```
-[ VPS Production: vmi3371043 ]                      [ Monitoring Hub VPS (Miniappify) ]
-┌───────────────────────────────┐                  ┌─────────────────────────────────┐
-│ • VictoriaMetrics Agent       │                  │ • VictoriaMetrics TSDB Cluster  │
-│   (vmagent nhẹ, ít tốn RAM)   │                  │ • VictoriaLogs Storage          │
-│ • Node Exporter (Metrics OS)  │ === WireGuard == │ • Grafana Dashboards            │
-│ • Kube-State-Metrics (K8s)    │    Tunnel VPN    │ • Alertmanager (Telegram/Slack) │
-│ • Fluent Bit (Gom Log)        │                  │                                 │
-└───────────────────────────────┘                  └─────────────────────────────────┘
+```text
+┌────────────────────────────────────────────────────────┐         ┌──────────────────────────────────────────────────────────┐
+│             CỤM PRODUCTION K3S (Đức - EU)              │         │             MONITORING HUB (Việt Nam - VN)               │
+│                  Host: vmi3371043                      │         │                    Host: miniappify                      │
+│                                                        │         │                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │         │  ┌────────────────────────────────────────────────────┐  │
+│  │ node-exporter│  │kube-state-m. │  │ Kubelet/cAdv │  │         │  │                 VictoriaMetrics                    │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │         │  │                (TSDB lưu trữ 30d)                  │  │
+│         │                 │                 │          │         │  └────────────────────────▲───────────────────────────┘  │
+│         └───────────┬─────┴─────────────────┘          │         │                           │                              │
+│                     ▼                                  │         │               Remote Write (TCP :8428)                   │
+│               ┌───────────┐                            │         │                           │                              │
+│               │  vmagent  │                            │         │                           │                              │
+│               │ (Scrape & │                            │         │                           │                              │
+│               │ 2GB Buffer)                            │         │                           │                              │
+│               └─────┬─────┘                            │         │                           │                              │
+│                     │                                  │         │                           │                              │
+│                     ▼                                  │         │                           │                              │
+│              ┌─────────────┐                           │         │                     ┌───────────┐                        │
+│              │   wg-hub    │==================== WIREGUARD VPN ========================│    wg0    │                        │
+│              │ 10.66.66.10 │   (Mã hóa đường hầm xuyên lục địa RTT ~250ms)             │10.66.66.1 │                        │
+│              └─────────────┘                                     │                     └─────┬─────┘                        │
+│                                                                  │                           │                              │
+└──────────────────────────────────────────────────────────────────┘                           │                              │
+                                                                                               ▼                              │
+                                                                   ┌──────────────────────────────────────────────────────┐   │
+                                                                   │  • vmalert + Alertmanager (Báo Telegram)             │   │
+                                                                   │  • Dead Man's Switch (Healthchecks.io)               │   │
+                                                                   │  • Grafana Dashboard (Trực quan hóa)                 │   │
+                                                                   └──────────────────────────────────────────────────────┘   │
 ```
 
 * Trên VPS Production, chúng ta **chỉ cài các Agent siêu nhẹ** (`vmagent`, `fluent-bit`, `node-exporter`). Chúng chỉ tốn khoảng ~50-80MB RAM.
