@@ -9,8 +9,12 @@ deployment:
 priorityClassName: platform-critical
 
 resources:
-  requests: { cpu: 50m, memory: 64Mi }
-  limits: { memory: 192Mi }
+  requests: { cpu: 100m, memory: 128Mi }
+  limits: { memory: 512Mi }
+
+env:
+  - name: GOMEMLIMIT
+    value: "460MiB"
 
 service:
   type: LoadBalancer
