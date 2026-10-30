@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: fumi-live-gateway
     app.kubernetes.io/component: gateway
 spec:
-  replicas: 3
+  replicas: 1
   revisionHistoryLimit: 5
   # Surge a new pod first; the old one drains (WS close 1001, extension reconnects).
   strategy:
