@@ -24,7 +24,7 @@ spec:
     - type: Container
       defaultRequest: { cpu: 20m, memory: 32Mi }
       default: { memory: 256Mi }
-      max: { memory: 1Gi }
+      max: { cpu: 1400m, memory: 1Gi }
 ---
 apiVersion: v1
 kind: ResourceQuota
@@ -33,6 +33,7 @@ metadata:
   namespace: fumi-live-prod
 spec:
   hard:
+    requests.cpu: 600m           # 2 x 200m gateway (rollout) + 100m migrate Job + headroom
     requests.memory: 768Mi       # 2 x 256Mi + 192Mi (+ headroom)
     limits.memory: 1536Mi        # 2 x 512Mi + 512Mi
     pods: "5"

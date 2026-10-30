@@ -61,13 +61,14 @@ spec:
             privileged: false
             capabilities:
               drop: ["ALL"]
-          # No CPU limit on purpose: CFS throttling adds jitter to realtime audio.
-          # The request guarantees the share; idle CPU on the node is usable in bursts.
+          # CPU limit is set to 1200m (1.2 cores): prevents node CPU starvation while
+          # giving ample headroom for audio processing bursts without CFS throttling jitter.
           resources:
             requests:
               cpu: 200m
               memory: 256Mi
             limits:
+              cpu: 1200m
               memory: 512Mi
               ephemeral-storage: 256Mi
           startupProbe:
