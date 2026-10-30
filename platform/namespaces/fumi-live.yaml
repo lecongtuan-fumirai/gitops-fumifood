@@ -33,10 +33,10 @@ metadata:
   namespace: fumi-live-prod
 spec:
   hard:
-    requests.cpu: 600m           # 2 x 200m gateway (rollout) + 100m migrate Job + headroom
-    requests.memory: 768Mi       # 2 x 256Mi + 192Mi (+ headroom)
-    limits.memory: 1536Mi        # 2 x 512Mi + 512Mi
-    pods: "5"
+    requests.cpu: "1200m"        # Accommodates up to 5 pods (5 x 200m) + headroom
+    requests.memory: 1536Mi      # Accommodates up to 5 pods (5 x 256Mi) + headroom
+    limits.memory: 2816Mi        # 5 x 512Mi + headroom
+    pods: "7"
 ---
 apiVersion: v1
 kind: ServiceAccount
