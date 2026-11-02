@@ -26,8 +26,8 @@ images:
   # Always tag + digest of the SAME build.
   - name: fumi-live-gateway
     newName: ghcr.io/fumirai-ltd/fumi-live-gateway
-    newTag: sha-f68e289
-    digest: sha256:3afaa0263e1a75811b7a84093daef682549354596d7574c08446a9f6bff9b004
+    newTag: sha-09bca18
+    digest: sha256:fbc6449341e3feb25e3d6d9299c8edf2d1cbdd849fd7fea7657cb2aa522bf148
     # - name: fumi-live-migrator
     #   newName: ghcr.io/fumirai-ltd/fumi-live-migrator
     #   newTag: v0.1.0
