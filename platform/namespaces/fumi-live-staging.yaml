@@ -23,7 +23,7 @@ spec:
     - type: Container
       defaultRequest: { cpu: 20m, memory: 32Mi }
       default: { memory: 256Mi }
-      max: { cpu: 1000m, memory: 512Mi }
+      max: { cpu: 1400m, memory: 1Gi }
 ---
 apiVersion: v1
 kind: ResourceQuota
