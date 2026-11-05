@@ -5,4 +5,5 @@ resources:
   - platform-namespaces.yaml
   # - fumirai-lunch.yaml
   - fumi-live.yaml
+  - fumi-live-staging.yaml
 
