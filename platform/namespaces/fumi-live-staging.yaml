@@ -32,10 +32,10 @@ metadata:
   namespace: fumi-live-staging
 spec:
   hard:
-    requests.cpu: "400m"
-    requests.memory: 512Mi
-    limits.memory: 1024Mi
-    pods: "3"
+    requests.cpu: "600m"
+    requests.memory: 768Mi
+    limits.memory: 1536Mi
+    pods: "4"
 ---
 apiVersion: v1
 kind: ServiceAccount

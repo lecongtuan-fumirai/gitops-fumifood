@@ -39,6 +39,7 @@ patches:
       - { op: replace, path: /spec/rules/0/http/paths/2/path, value: /staging/projects }
       - { op: replace, path: /spec/rules/0/http/paths/3/path, value: /staging/auth }
       - { op: add, path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares, value: "fumi-live-staging-strip-prefix@kubernetescrd, traefik-security-headers@kubernetescrd" }
+      - { op: remove, path: /metadata/annotations/cert-manager.io~1cluster-issuer }
   - target: {kind: Deployment, name: fumi-live-gateway}
     patch: |-
       - { op: replace, path: /spec/replicas, value: 1 }
