@@ -1,11 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: fumi-portal
+  name: fumi-portal-api
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: >-
+      fumi-portal-prod-strip-portal-api@kubernetescrd,
       traefik-security-headers@kubernetescrd,
       traefik-rate-limit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.priority: "100"
 spec:
   ingressClassName: traefik
   tls:
@@ -23,6 +25,26 @@ spec:
                 name: backend
                 port:
                   number: 3004
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fumi-portal-frontend
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      traefik-security-headers@kubernetescrd,
+      traefik-rate-limit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.priority: "50"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - fumifood.dpdns.org
+      secretName: fumi-live-tls
+  rules:
+    - host: fumifood.dpdns.org
+      http:
+        paths:
           - path: /portal
             pathType: Prefix
             backend:

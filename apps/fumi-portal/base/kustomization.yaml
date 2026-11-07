@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
   - frontend.yaml
   - backend.yaml
+  - middleware.yaml
   - ingress.yaml
-
