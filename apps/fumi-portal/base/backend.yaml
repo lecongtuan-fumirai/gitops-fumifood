@@ -26,17 +26,18 @@ spec:
       terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: backend
           image: fumi-portal-backend            # set by overlay (tag + digest)
           imagePullPolicy: IfNotPresent
           ports:
-            - { name: http, containerPort: 8080 }
+            - { name: http, containerPort: 3000 }
           env:
-            - { name: PORT, value: "8080" }
+            - { name: PORT, value: "3000" }
           envFrom:
             - secretRef:
                 name: fumi-portal-env
@@ -48,16 +49,16 @@ spec:
             readOnlyRootFilesystem: true
             capabilities: { drop: [ALL] }
           startupProbe:
-            httpGet: { path: /health, port: http }
+            httpGet: { path: /healthz, port: http }
             periodSeconds: 3
             failureThreshold: 20
           readinessProbe:
-            httpGet: { path: /health, port: http }
+            httpGet: { path: /healthz, port: http }
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
           livenessProbe:
-            httpGet: { path: /health, port: http }
+            httpGet: { path: /healthz, port: http }
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
@@ -78,4 +79,4 @@ spec:
     app.kubernetes.io/name: fumi-portal
     app.kubernetes.io/component: backend
   ports:
-    - { name: http, port: 8080, targetPort: http }
+    - { name: http, port: 3000, targetPort: http }

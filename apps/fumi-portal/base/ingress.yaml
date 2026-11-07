@@ -22,7 +22,7 @@ spec:
               service:
                 name: backend
                 port:
-                  number: 8080
+                  number: 3000
           - path: /portal
             pathType: Prefix
             backend:
