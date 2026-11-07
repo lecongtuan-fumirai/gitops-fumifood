@@ -32,10 +32,10 @@ metadata:
   namespace: fumi-portal-prod
 spec:
   hard:
-    requests.cpu: "300m"
-    requests.memory: 256Mi
-    limits.cpu: "800m"
-    limits.memory: 512Mi
+    requests.cpu: "400m"
+    requests.memory: 384Mi
+    limits.cpu: "1000m"
+    limits.memory: 768Mi
     pods: "6"
 ---
 apiVersion: v1
