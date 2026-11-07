@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - priority-classes.yaml
   - platform-namespaces.yaml
+  - fumi-portal.yaml
   # - fumirai-lunch.yaml
   - fumi-live.yaml
   - fumi-live-staging.yaml
