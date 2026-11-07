@@ -31,35 +31,40 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: backend
-          image: docker.io/traefik/whoami:v1.10.1
+          image: fumi-portal-backend            # set by overlay (tag + digest)
           imagePullPolicy: IfNotPresent
-          args:
-            - --port
-            - "8080"
           ports:
             - { name: http, containerPort: 8080 }
+          env:
+            - { name: PORT, value: "8080" }
           envFrom:
             - secretRef:
                 name: fumi-portal-env
           resources:
-            requests: { cpu: 15m, memory: 32Mi }
-            limits: { cpu: 100m, memory: 96Mi }
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 256Mi }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: [ALL] }
           startupProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 2
-            failureThreshold: 15
+            periodSeconds: 3
+            failureThreshold: 20
           readinessProbe:
             httpGet: { path: /health, port: http }
             periodSeconds: 10
-            timeoutSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             httpGet: { path: /health, port: http }
             periodSeconds: 20
+            timeoutSeconds: 5
             failureThreshold: 3
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
 ---
 apiVersion: v1
 kind: Service
@@ -74,4 +79,3 @@ spec:
     app.kubernetes.io/component: backend
   ports:
     - { name: http, port: 8080, targetPort: http }
-

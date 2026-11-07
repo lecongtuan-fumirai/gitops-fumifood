@@ -5,3 +5,11 @@ resources:
   - ../../base
 generators:
   - secret-generator.yaml
+images:
+  # Promotion = change tag+digest here via reviewed PR.
+  - name: fumi-portal-backend
+    newName: docker.io/tuanstark/expense-tracker-function
+    newTag: sha-5e69176
+  - name: fumi-portal-frontend
+    newName: docker.io/tuanstark/expense-tracker-customer
+    newTag: sha-a3e71f5
