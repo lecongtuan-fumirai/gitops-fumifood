@@ -3,3 +3,5 @@ kind: Kustomization
 namespace: fumi-portal-prod
 resources:
   - ../../base
+generators:
+  - secret-generator.yaml

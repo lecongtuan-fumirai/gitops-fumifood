@@ -135,3 +135,4 @@ spec:
               app.kubernetes.io/component: backend
       ports:
         - { protocol: TCP, port: 8080 }
+
