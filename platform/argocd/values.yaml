@@ -10,7 +10,64 @@ crds:
 dex:
   enabled: false
 notifications:
-  enabled: false
+  enabled: true
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 64Mi }
+  secret:
+    create: false
+  cm:
+    create: true
+    data:
+      service.telegram: |
+        token: $telegram-token
+
+      template.app-deployed: |
+        message: |
+          ✅ [CD SUCCESS] Pod Rollout Complete!
+          • Application: {{.app.metadata.name}}
+          • Health: {{.app.status.health.status}}
+          • Sync: {{.app.status.sync.status}}
+          • Revision: {{.app.status.sync.revision | trunc 7}}
+          {{- if .app.status.summary.images }}
+          • Images:
+          {{- range .app.status.summary.images }}
+            - {{ . }}
+          {{- end }}
+          {{- end }}
+
+      template.app-failed: |
+        message: |
+          🚨 [CD FAILED] Pod Rollout / Deployment Issue!
+          • Application: {{.app.metadata.name}}
+          • Health: {{.app.status.health.status}}
+          • Sync: {{.app.status.sync.status}}
+          • Revision: {{.app.status.sync.revision | trunc 7}}
+          • Details: {{.app.status.operationState.message}}
+          {{- if .app.status.operationState.syncResult.resources }}
+          • Issues:
+          {{- range .app.status.operationState.syncResult.resources }}
+          {{- if and (ne .status "Synced") (ne .hookPhase "Running") }}
+            - {{.kind}}/{{.name}}: {{.message}}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+
+      trigger.on-deployed: |
+        - description: Application is synced and healthy (pod rollout done)
+          send: [app-deployed]
+          when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+          oncePer: app.status.sync.revision
+
+      trigger.on-health-degraded: |
+        - description: Application health degraded (pod crashed/failed)
+          send: [app-failed]
+          when: app.status.health.status == 'Degraded'
+
+      trigger.on-sync-failed: |
+        - description: Application sync failed
+          send: [app-failed]
+          when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
 applicationSet:
   replicas: 1
   resources:

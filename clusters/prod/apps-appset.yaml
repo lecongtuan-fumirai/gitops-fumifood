@@ -19,13 +19,17 @@ spec:
           - path: apps/fumirai-lunch/overlays/staging
             exclude: true
   syncPolicy:
-    preserveResourcesOnDeletion: true      # deleting the AppSet never wipes workloads
+    preserveResourcesOnDeletion: true # deleting the AppSet never wipes workloads
   template:
     metadata:
       name: '{{ index .path.segments 1 }}-{{ .path.basename }}'
       labels:
         app.kubernetes.io/part-of: '{{ index .path.segments 1 }}'
         env: '{{ .path.basename }}'
+      annotations:
+        notifications.argoproj.io/subscribe.on-deployed.telegram: "-5505960288"
+        notifications.argoproj.io/subscribe.on-health-degraded.telegram: "-5505960288"
+        notifications.argoproj.io/subscribe.on-sync-failed.telegram: "-5505960288"
     spec:
       project: apps
       source:
@@ -40,7 +44,7 @@ spec:
           prune: true
           selfHeal: true
         syncOptions:
-          - CreateNamespace=false          # namespaces are owned by platform/namespaces
+          - CreateNamespace=false # namespaces are owned by platform/namespaces
           - ServerSideApply=true
           - PruneLast=true
         retry:

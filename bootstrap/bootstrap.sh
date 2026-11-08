@@ -45,6 +45,15 @@ kubectl -n argocd create secret generic repo-platform-gitops \
   | kubectl label --local -f - argocd.argoproj.io/secret-type=repository -o yaml \
   | kubectl apply -f -
 
+log "Argo CD Notifications Secret (Telegram)"
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+  kubectl -n argocd create secret generic argocd-notifications-secret \
+    --from-literal=telegram-token="$TELEGRAM_BOT_TOKEN" --dry-run=client -o yaml | kubectl apply -f -
+elif [ -f "$ROOT/hub/secrets/telegram_bot_token" ]; then
+  kubectl -n argocd create secret generic argocd-notifications-secret \
+    --from-file=telegram-token="$ROOT/hub/secrets/telegram_bot_token" --dry-run=client -o yaml | kubectl apply -f -
+fi
+
 log "Install Argo CD chart $ARGOCD_CHART_VERSION"
 helm repo add argo https://argoproj.github.io/argo-helm >/dev/null 2>&1 || true
 helm repo update argo >/dev/null

@@ -25,7 +25,7 @@ while IFS= read -r f; do
 done < <(grep -rlE '^kind:\s*Secret\s*$' "$ROOT/apps" "$ROOT/platform" "$ROOT/clusters" --include='*.yaml' | grep -v '\.enc\.yaml$' || true)
 
 echo "== 2. kustomize build"
-cp -a "$ROOT" "$WORK/repo"
+cp -a --no-preserve=ownership "$ROOT" "$WORK/repo"
 find "$WORK/repo" -name kustomization.yaml -exec yq -i 'del(.generators)' {} \;
 mkdir -p "$WORK/out"
 while IFS= read -r k; do
