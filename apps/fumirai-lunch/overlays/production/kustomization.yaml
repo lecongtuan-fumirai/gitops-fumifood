@@ -10,8 +10,8 @@ images:
   # Promotion = change tag+digest here via reviewed PR.
   - name: fumirai-lunch-backend
     newName: docker.io/lecongtuan/fumirai-lunch-backend
-    newTag: sha-fa9897c
-    digest: sha256:300dd005dd90a6dd51db1560262ee821962c6752c7f308a584bdbdce4f589225
+    newTag: sha-4d699c5
+    digest: sha256:692b2d2a0f40c69b5b97dd92d16d31ccb3771344c0f2ebf2c9755d9ddfc49bd0
   - name: fumirai-lunch-frontend
     newName: docker.io/lecongtuan/fumirai-lunch-frontend
     newTag: sha-a34a86f
