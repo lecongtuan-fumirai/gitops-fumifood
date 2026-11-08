@@ -12,4 +12,4 @@ images:
     newTag: sha-23e2f96
   - name: fumi-portal-frontend
     newName: docker.io/tuanstark/expense-tracker-customer
-    newTag: sha-a3e71f5
+    newTag: sha-bc0539d
