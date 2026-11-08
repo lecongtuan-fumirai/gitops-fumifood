@@ -6,3 +6,4 @@ spec:
   stripPrefix:
     prefixes:
       - /portal
+
