@@ -9,7 +9,7 @@ images:
   # Promotion = change tag+digest here via reviewed PR.
   - name: fumi-portal-backend
     newName: docker.io/tuanstark/expense-tracker-function
-    newTag: sha-5e69176
+    newTag: sha-23e2f96
   - name: fumi-portal-frontend
     newName: docker.io/tuanstark/expense-tracker-customer
     newTag: sha-a3e71f5
