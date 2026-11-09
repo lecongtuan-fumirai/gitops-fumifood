@@ -13,13 +13,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - fumifood.dpdns.org
-      secretName: fumi-live-tls
         - monevia.tech
         - www.monevia.tech
       secretName: monevia-tls
   rules:
-    - host: fumifood.dpdns.org
     - host: monevia.tech
       http:
         paths:
@@ -94,13 +91,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - fumifood.dpdns.org
-      secretName: fumi-live-tls
         - monevia.tech
         - www.monevia.tech
       secretName: monevia-tls
   rules:
-    - host: fumifood.dpdns.org
     - host: monevia.tech
       http:
         paths:
