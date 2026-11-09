@@ -3,8 +3,11 @@ kind: Kustomization
 resources:
   - priority-classes.yaml
   - platform-namespaces.yaml
-  - fumi-portal.yaml
+  - expense-tracker.yaml
+  # Decommissioned applications:
   # - fumirai-lunch.yaml
-  - fumi-live.yaml
-  - fumi-live-staging.yaml
+  # - fumi-live.yaml
+  # - fumi-live-staging.yaml
 
+  # - fumi-live.yaml
+  # - fumi-live-staging.yaml

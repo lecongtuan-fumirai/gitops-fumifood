@@ -13,19 +13,18 @@ spec:
         repoURL: git@github.com:lecongtuan-fumirai/gitops-fumifood.git
         revision: main
         directories:
-          - path: apps/*/overlays/*
-          # Staging is disabled until its Neon branch + DNS + OAuth callback exist.
-          # Remove this exclusion to enable it.
-          - path: apps/fumirai-lunch/overlays/staging
-            exclude: true
+          # Only active application: expense-tracker
+          - path: apps/expense-tracker/overlays/*
   syncPolicy:
-    preserveResourcesOnDeletion: true # deleting the AppSet never wipes workloads
+    preserveResourcesOnDeletion: false
   template:
     metadata:
       name: '{{ index .path.segments 1 }}-{{ .path.basename }}'
       labels:
         app.kubernetes.io/part-of: '{{ index .path.segments 1 }}'
         env: '{{ .path.basename }}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
       annotations:
         notifications.argoproj.io/subscribe.on-deployed.telegram: "-5505960288"
         notifications.argoproj.io/subscribe.on-health-degraded.telegram: "-5505960288"

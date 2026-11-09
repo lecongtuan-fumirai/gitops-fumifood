@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: fumi-portal-api
   annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.middlewares: >-
       fumi-portal-prod-strip-portal-api@kubernetescrd,
       traefik-security-headers@kubernetescrd,
@@ -14,8 +15,22 @@ spec:
     - hosts:
         - fumifood.dpdns.org
       secretName: fumi-live-tls
+        - monevia.tech
+        - www.monevia.tech
+      secretName: monevia-tls
   rules:
     - host: fumifood.dpdns.org
+    - host: monevia.tech
+      http:
+        paths:
+          - path: /portal/api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3004
+    - host: www.monevia.tech
       http:
         paths:
           - path: /portal/api
@@ -29,8 +44,48 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: fumi-portal-direct-api
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      traefik-security-headers@kubernetescrd,
+      traefik-rate-limit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.priority: "90"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - monevia.tech
+        - www.monevia.tech
+      secretName: monevia-tls
+  rules:
+    - host: monevia.tech
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3004
+    - host: www.monevia.tech
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3004
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: fumi-portal-frontend
   annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.middlewares: >-
       traefik-security-headers@kubernetescrd,
       traefik-rate-limit@kubernetescrd
@@ -41,10 +96,38 @@ spec:
     - hosts:
         - fumifood.dpdns.org
       secretName: fumi-live-tls
+        - monevia.tech
+        - www.monevia.tech
+      secretName: monevia-tls
   rules:
     - host: fumifood.dpdns.org
+    - host: monevia.tech
       http:
         paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 8080
+          - path: /portal
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 8080
+    - host: www.monevia.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 8080
           - path: /portal
             pathType: Prefix
             backend:
